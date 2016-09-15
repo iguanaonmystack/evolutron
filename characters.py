@@ -30,6 +30,7 @@ class Neuron(object):
     def __repr__(self):
         return "Neuron(%r, %r) <%r>" % (self.input_count, self.value, self.input_weights)
 
+
 class Brain(object):
     def __init__(self, inputs=2, hidden_neurons=5, outputs=1):
         self.hidden0 = []
@@ -47,6 +48,7 @@ class Brain(object):
             output.process(self.hidden0)
         return [output.value for output in self.outputs]
 
+
 class Character(pygame.sprite.Sprite):
     def __init__(self, world):
         super(Character, self).__init__()
@@ -57,8 +59,8 @@ class Character(pygame.sprite.Sprite):
         self.r = 25  # radius
         self._x = None
         self._y = None
-        self.dx = 0
-        self.dy = 0
+        self._angle = math.pi / 2 * 3
+        self._speed = 1
 
         self.brain = Brain(2, 5, 2)
 
@@ -75,20 +77,23 @@ class Character(pygame.sprite.Sprite):
        self.image.fill(color)
     
     def update(self):
-        self.dx, self.dy = self.brain.process(self._x, self._y)
-        print self._x, self._y, self.dx, self.dy
-        self.x += self.dx
-        self.y += self.dy
+        self._angle, self._speed = self.brain.process(self._angle, self._speed)
+        prev_x, prev_y = self.x, self.y
+        self.x += self._speed * math.sin(self._angle)
+        self.y -= self._speed * math.cos(self._angle)
         collided = pygame.sprite.spritecollide(self, self.world.allcharacters, 0)
         collided += pygame.sprite.spritecollide(self, self.world.allwalls, 0)
         for item in collided:
             if item is not self:
-                self.x -= self.dx
-                self.y -= self.dy
-                self.dx = 0 #-self.dx
-                self.dy = 0 #-self.dy
+                self.x = prev_x
+                self.y = prev_y
+                self._speed = 0
 
         pygame.draw.circle(self.image, (0,255,0), (25,25), self.r, 0)
+        eye_pos = [self.r, self.r]
+        eye_pos[0] += int((self.r - 5) * math.sin(self._angle))
+        eye_pos[1] -= int((self.r - 5) * math.cos(self._angle))
+        pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
     
     @property
     def x(self):
@@ -108,3 +113,13 @@ class Character(pygame.sprite.Sprite):
         self._y = value
         self.rect.y = value
 
+    
+    def __str__(self):
+        return '\n'.join([
+            "Character:",
+            "r: %s" % self.r,
+            "angle: %s" % self._angle,
+            "speed: %s" % self._speed,
+            "x: %s" % self._x,
+            "y: %s" % self._y,
+        ])
