@@ -27,7 +27,7 @@ class World(object):
         self.allwalls.add(tiles.Tile(-1, 0, 100, self.h))
         
         self.allcharacters = pygame.sprite.Group()
-        for i in range(10):
+        for i in range(100):
             character = characters.Character(self)
             while character.x is None \
             or pygame.sprite.spritecollideany(character, self.allcharacters):
