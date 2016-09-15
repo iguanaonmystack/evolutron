@@ -36,6 +36,8 @@ class World(object):
                 character.acc_x = random.random() * 4 - 2
                 character.acc_y = random.random() * 4 - 2
             self.allcharacters.add(character)
+
+        self.active_sprite = None
     
     def update(self, dt):
         for group in (self.alltiles, self.allwalls, self.allcharacters):
@@ -44,7 +46,19 @@ class World(object):
     def frame(self, tick_progress):
         for group in (self.alltiles, self.allwalls, self.allcharacters):
             group.draw(self.background)
+        font = pygame.font.Font(None, 18)
         self.screen.blit(self.background, self.viewport_offset)
+        if self.active_sprite:
+            s = str(self.active_sprite)
+            off = 0
+            for line in s.split('\n'):
+                text = font.render(line, True, (0, 0, 0))
+                rect = text.get_rect()
+                image = pygame.Surface((rect.w, rect.h)).convert()
+                image.fill((255, 255, 255))
+                self.screen.blit(image, (0, 0 + off))
+                self.screen.blit(text, (0, 0 + off))
+                off += rect.h
         pygame.display.flip()
 
 
@@ -68,3 +82,10 @@ class World(object):
             if self.viewport_offset[i] < - size[i] + self.viewport_size[i]:
                 self.viewport_offset[i] = - size[i] + self.viewport_size[i];
 
+
+    def click(self, pos):
+        clicked_sprites = [s for s in self.allcharacters if s.rect.collidepoint(pos)]
+        if clicked_sprites:
+            self.active_sprite = clicked_sprites[0]
+        else:
+            self.active_sprite = None

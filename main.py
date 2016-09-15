@@ -18,6 +18,7 @@ def main():
     world = _world.World(*world_size)
 
     mousedown_pos = None
+    mouse_was_dragged = False
 
     clock = gameclock.GameClock(
         max_ups=60,     # game running speed
@@ -38,9 +39,13 @@ def main():
                 world.resize(*event.dict['size'])
             elif event.type == MOUSEBUTTONDOWN:
                 mousedown_pos = event.dict['pos']
+                mouse_was_dragged = False
             elif event.type == MOUSEBUTTONUP:
                 mousedown_pos = None
+                if not mouse_was_dragged:
+                    world.click(event.dict['pos'])
             elif event.type == MOUSEMOTION and mousedown_pos is not None:
+                mouse_was_dragged = True
                 world.drag(event.dict['rel'])
 
 
