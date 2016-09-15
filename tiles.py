@@ -19,7 +19,6 @@ class Tile(pygame.sprite.Sprite):
 
         self.rect.x = self._x * self._w
         self.rect.y = self._y * self._h
-        print self.rect
 
     @property
     def colour(self):
