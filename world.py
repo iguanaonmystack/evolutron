@@ -28,19 +28,23 @@ class World(object):
         
         self.allcharacters = pygame.sprite.Group()
         for i in range(100):
-            g = genome.Genome.from_random()
-            character = characters.Character.from_genome(self, g)
-            while character.x is None \
-            or pygame.sprite.spritecollideany(character, self.allcharacters):
-                character.x = random.randint(0, w - character.r * 2)
-                character.y = random.randint(0, h - character.r * 2)
-                character.acc_x = random.random() * 4 - 2
-                character.acc_y = random.random() * 4 - 2
-            self.allcharacters.add(character)
-        #import sys; sys.exit()
+            self._create_character()
         self.display_item = None
-    
+
+    def _create_character(self):
+        g = genome.Genome.from_random()
+        character = characters.Character.from_genome(self, g)
+        while character.x is None \
+        or pygame.sprite.spritecollideany(character, self.allcharacters):
+            character.x = random.randint(0, self.w - character.r * 2)
+            character.y = random.randint(0, self.h - character.r * 2)
+            character.acc_x = random.random() * 4 - 2
+            character.acc_y = random.random() * 4 - 2
+        self.allcharacters.add(character)
+
     def update(self, dt):
+        while len(self.allcharacters) < 100:
+            self._create_character()
         for group in (self.alltiles, self.allwalls, self.allcharacters):
             group.update(dt)
 
