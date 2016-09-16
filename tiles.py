@@ -33,7 +33,7 @@ class Tile(pygame.sprite.Sprite):
         self._nutrition = value
     
     def update(self, dt):
-        self._nutrition += 50
+        self._nutrition += 50 * dt
         if self._nutrition > self._max_nutrition:
             self._nutrition = self._max_nutrition
         

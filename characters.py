@@ -134,9 +134,14 @@ class Character(pygame.sprite.Sprite):
     
     def update(self, dt):
         # observing world
-        current_tile = [
+        current_tiles = [
             t for t in self.world.alltiles
-            if t.rect.collidepoint(self._x + self._r, self.y + self._r)][0]
+            if t.rect.collidepoint(self._x + self._r, self.y + self._r)]
+        if not current_tiles:
+            # oops, off the map
+            self.world.allcharacters.remove(self)
+            return
+        current_tile = current_tiles[0]
 
         # energy and age:
         self._age += dt
@@ -155,7 +160,7 @@ class Character(pygame.sprite.Sprite):
         )
         outputs = (
             self._angle,
-            self._speed,
+            self._speed, # TODO this should be acceleration
             self._eating,
             self._spawn,
         ) = self.brain.process(*inputs)
