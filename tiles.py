@@ -37,6 +37,7 @@ class Tile(pygame.sprite.Sprite):
         if self._nutrition > self._max_nutrition:
             self._nutrition = self._max_nutrition
         
+    def draw(self):
         if self._max_nutrition == 0:
             self.image.fill((0, 0, 0))
             return

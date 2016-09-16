@@ -2,6 +2,7 @@ import math
 import struct
 import random
 import operator
+import time
 
 import pygame
 from pygame.locals import *
@@ -21,10 +22,9 @@ class Neuron(object):
         self.input_weights = input_weights[:]
 
     def process(self, inputs):
-        assert len(inputs) == len(self.input_weights)
         self.value = sum(
-            inputs[i].value * weight
-            for i, weight in enumerate(self.input_weights))
+            input_.value * weight
+            for input_, weight in zip(inputs, self.input_weights))
         if self.fn is not None:
             self.value = self.fn(self.value)
 
@@ -71,7 +71,7 @@ class Character(pygame.sprite.Sprite):
         self.world = world
 
         # Physical properties
-        self._r = 25   # radius, m
+        self.r = 25   # radius, m
         self._x = None # x coord, m
         self._y = None # y coord, m
         self._angle = math.pi / 2 # radians clockwise from north
@@ -87,37 +87,38 @@ class Character(pygame.sprite.Sprite):
 
         # Drawing
         if world:
-            self.image = pygame.Surface((self._r * 2, self._r * 2), SRCALPHA).convert_alpha()
+            self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
 
     @classmethod
     def from_genome(cls, world, genome):
         self = cls(world)
         
-        self._r = 1 + (31 & struct.unpack('!B', genome.data[:1])[0])
-        num_hidden_neurons = 1 + (7 & struct.unpack('!B', genome.data[1:2])[0])
+        genedata = genome.data
+        self.r = genedata[0]
+        num_hidden_neurons = genedata[1]
         input_weights = []
         output_weights = []
         pos = 2
         for i in range(num_hidden_neurons):
             row = []
             for j in range(cls.brain_inputs):
-                data = genome.data[pos:pos + 4]
+                data = genome.data[pos:pos + 1]
                 value = 0
-                if len(data) == 4:
-                    value = struct.unpack('!i', data)[0] / float(2**31)
+                if len(data) == 1:
+                    value = data[0]
                 row.append(value)
-                pos += 4
+                pos += 1
             input_weights.append(row)
         for i in range(cls.brain_outputs):
             row = []
             for j in range(num_hidden_neurons):
-                data = genome.data[pos:pos + 4]
+                data = genome.data[pos:pos + 1]
                 value = 0
-                if len(data) == 4:
-                    value = struct.unpack('!i', data)[0] / float(2**31)
+                if len(data) == 1:
+                    value = data[0]
                 row.append(value)
-                pos += 4
+                pos += 1
             output_weights.append(row)
 
         self.brain = Brain(input_weights, output_weights)
@@ -132,14 +133,30 @@ class Character(pygame.sprite.Sprite):
     def colour(self, color):
        self.image.fill(color)
     
+    def draw(self):
+        self.rect.x = self._x
+        self.rect.y = self._y
+        pygame.draw.circle(self.image, (255,255,0), (25,25), self.r, 0)
+        eye_pos = [self.r, self.r]
+        eye_pos[0] += int((self.r - 5) * math.sin(self._angle))
+        eye_pos[1] -= int((self.r - 5) * math.cos(self._angle))
+        pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
+        font = pygame.font.Font(None, 24)
+        text = font.render(str(self._energy), True, (0, 0, 0))
+        self.image.blit(text, (self.r, self.r))
+
+    def die(self):
+        self.world.allcharacters.remove(self)
+
     def update(self, dt):
+        t1 = time.time()
         # observing world
         current_tiles = [
             t for t in self.world.alltiles
-            if t.rect.collidepoint(self._x + self._r, self.y + self._r)]
+            if t.rect.collidepoint(self._x + self.r, self.y + self.r)]
         if not current_tiles:
             # oops, off the map
-            self.world.allcharacters.remove(self)
+            self.die()
             return
         current_tile = current_tiles[0]
 
@@ -147,7 +164,7 @@ class Character(pygame.sprite.Sprite):
         self._age += dt
         self._energy -= self._energy_burn_rate * dt
         if self._energy <= 0:
-            self.world.allcharacters.remove(self)
+            self.die()
             return
 
         # brain - update brain_inputs and brain_outputs above if changing
@@ -158,12 +175,13 @@ class Character(pygame.sprite.Sprite):
             self._energy,
             current_tile.nutrition,
         )
-        outputs = (
+        outputs = self.brain.process(*inputs)
+        (
             self._angle,
             self._speed, # TODO this should be acceleration
             self._eating,
             self._spawn,
-        ) = self.brain.process(*inputs)
+        ) = outputs
 
         # eating:
         if self._eating > 0:
@@ -179,8 +197,8 @@ class Character(pygame.sprite.Sprite):
                 self._energy -= 1000
                 newgenome = self._genome.mutate()
                 newchar = self.__class__.from_genome(self.world, newgenome)
-                newchar.x = self.x
-                newchar.y = self.y
+                newchar.x = self._x
+                newchar.y = self._y
                 op = operator.sub
                 while pygame.sprite.spritecollideany(newchar, self.world.allcharacters):
                     newchar.x = op(newchar.x, 1)
@@ -189,7 +207,7 @@ class Character(pygame.sprite.Sprite):
                 self.world.allcharacters.add(newchar)
 
         # speed and position:
-        prev_x, prev_y = self.x, self.y
+        prev_x, prev_y = self._x, self._y
         ddist = self._speed * dt
         self.x += ddist * math.sin(self._angle)
         self.y -= ddist * math.cos(self._angle)
@@ -200,17 +218,13 @@ class Character(pygame.sprite.Sprite):
                 self.x = prev_x
                 self.y = prev_y
                 self._speed = 0
-    
-        # drawing
-        pygame.draw.circle(self.image, (0,255,0), (25,25), self._r, 0)
-        eye_pos = [self._r, self._r]
-        eye_pos[0] += int((self._r - 5) * math.sin(self._angle))
-        eye_pos[1] -= int((self._r - 5) * math.cos(self._angle))
-        pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
-        font = pygame.font.Font(None, 24)
-        text = font.render(str(self._energy), True, (0, 0, 0))
-        self.image.blit(text, (self._r, self._r))
+        if self._x < 0 or self._y < 0 or self._x > self.world.w or self._y > self.world.h:
+            self.die()
+            return
 
+        t2 = time.time()
+        self.draw()
+    
     @property
     def x(self):
         return self._x
@@ -229,14 +243,6 @@ class Character(pygame.sprite.Sprite):
         self._y = value
         self.rect.y = value
 
-    @property
-    def r(self):
-        return self._r
-    
-    @r.setter
-    def r(self, value):
-        self._r = value
-    
     def __str__(self):
         return '\n'.join([
             "Character:",
@@ -244,7 +250,7 @@ class Character(pygame.sprite.Sprite):
             "eating: %s" % self._eating,
             "spawn: %s" % self._spawn,
             "energy: %s" % self._energy,
-            "r: %s" % self._r,
+            "r: %s" % self.r,
             "angle: %s" % self._angle,
             "speed: %s" % self._speed,
             "x: %s" % self._x,

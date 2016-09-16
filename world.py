@@ -6,6 +6,9 @@ from pygame.locals import *
 import tiles
 import characters
 import genome
+import group
+
+MIN_CHARACTERS = 100
 
 class World(object):
     def __init__(self, w, h):
@@ -14,36 +17,33 @@ class World(object):
         self.resize(1000, 1000)
         self.viewport_offset = [0, 0]
     
-        self.alltiles = pygame.sprite.Group()
+        self.alltiles = group.Group()
         for i in range(self.w // tiles.Tile.default_w):
             for j in range(self.h // tiles.Tile.default_h):
                 block = tiles.Tile(i, j, max_nutrition=random.randint(0, 255))
                 self.alltiles.add(block)
 
-        self.allwalls = pygame.sprite.Group()
+        self.allwalls = group.Group()
         self.allwalls.add(tiles.Tile(0, -1, self.w, 100))
         self.allwalls.add(tiles.Tile(self.w / 100, 0, 100, self.h))
         self.allwalls.add(tiles.Tile(0, self.h / 100, self.w, 100))
         self.allwalls.add(tiles.Tile(-1, 0, 100, self.h))
         
-        self.allcharacters = pygame.sprite.Group()
-        for i in range(100):
-            self._create_character()
+        self.allcharacters = group.Group()
         self.display_item = None
 
     def _create_character(self):
         g = genome.Genome.from_random()
         character = characters.Character.from_genome(self, g)
-        while character.x is None \
+        print "creating character"
+        while character._x is None \
         or pygame.sprite.spritecollideany(character, self.allcharacters):
             character.x = random.randint(0, self.w - character.r * 2)
             character.y = random.randint(0, self.h - character.r * 2)
-            character.acc_x = random.random() * 4 - 2
-            character.acc_y = random.random() * 4 - 2
         self.allcharacters.add(character)
 
     def update(self, dt):
-        while len(self.allcharacters) < 100:
+        while len(self.allcharacters) < MIN_CHARACTERS:
             self._create_character()
         for group in (self.alltiles, self.allwalls, self.allcharacters):
             group.update(dt)
@@ -51,8 +51,8 @@ class World(object):
     def frame(self, tick_progress):
         for group in (self.alltiles, self.allwalls, self.allcharacters):
             group.draw(self.background)
-        font = pygame.font.Font(None, 18)
         self.screen.blit(self.background, self.viewport_offset)
+        font = pygame.font.Font(None, 18)
         if self.display_item:
             s = str(self.display_item)
             off = 0
@@ -64,6 +64,7 @@ class World(object):
                 self.screen.blit(image, (0, 0 + off))
                 self.screen.blit(text, (0, 0 + off))
                 off += rect.h
+        #pygame.display.update()
         pygame.display.flip()
 
 
