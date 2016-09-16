@@ -95,7 +95,6 @@ class World(object):
             return
         
         clicked_tiles = [t for t in self.alltiles if t.rect.collidepoint(pos)]
-        print clicked_tiles
         if clicked_tiles:
             self.display_item = clicked_tiles[0]
             return
