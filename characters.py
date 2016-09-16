@@ -1,8 +1,12 @@
 import math
+import struct
 import random
+import operator
 
 import pygame
 from pygame.locals import *
+
+import genome
 
 def sigmoid(x):
     try:
@@ -11,39 +15,46 @@ def sigmoid(x):
         return 0
 
 class Neuron(object):
-    def __init__(self, input_count, initial_value=None, fn=sigmoid):
-        self.input_count = input_count
+    def __init__(self, input_weights, initial_value=None, fn=sigmoid):
         self.fn = fn
         self.value = initial_value
-        self.input_weights = []
-        for i in range(input_count):
-            self.input_weights.append(random.random() * 2 - 1)
+        self.input_weights = input_weights[:]
 
     def process(self, inputs):
-        assert len(inputs) == self.input_count
+        assert len(inputs) == len(self.input_weights)
         self.value = sum(
-            inputs[i].value * self.input_weights[i]
-            for i in range(self.input_count))
+            inputs[i].value * weight
+            for i, weight in enumerate(self.input_weights))
         if self.fn is not None:
             self.value = self.fn(self.value)
 
     def __repr__(self):
-        return "Neuron(%r, %r) <%r>" % (self.input_count, self.value, self.input_weights)
+        return "Neuron(%r, %r) <%r>" % (self.input_weights, self.value, self.input_weights)
+    
 
 
 class Brain(object):
-    def __init__(self, inputs=2, hidden_neurons=5, outputs=1):
-        self.inputs = inputs
+    def __init__(self, input_weights, output_weights):
+        '''
+        input_weights -- an array of len of hidden neurons, each item
+            being an array of len of number of desired inputs.
+            eg for two inputs and four hidden layer neurons:
+                [ [1, 2], [2, 3], [4, 5], [5, 6] ]
+        output_weights -- similar to input weights, but for the number of
+            outputs and number of hidden layer neurons.
+            eg for two outputs and four hidden layer neurons:
+                [ [1, 2, 3, 4], [2, 3, 4, 5] ]
+        '''
+        self.input_weights = input_weights
         self.hidden0 = []
-        for i in range(hidden_neurons):
-            self.hidden0.append(Neuron(inputs))
+        for neuron_input_weights in input_weights:
+            self.hidden0.append(Neuron(neuron_input_weights))
         self.outputs = []
-        for i in range(outputs):
-            self.outputs.append(Neuron(hidden_neurons, fn=None))
+        for output_neuron_weights in output_weights:
+            self.outputs.append(Neuron(output_neuron_weights, fn=None))
 
     def process(self, *input_values):
-        assert len(input_values) == self.inputs, (input_values, self.inputs)
-        inputs = [Neuron(0, value) for value in input_values]
+        inputs = [Neuron([], value) for value in input_values]
         for neuron in self.hidden0:
             neuron.process(inputs)
         for output in self.outputs:
@@ -52,6 +63,8 @@ class Brain(object):
 
 
 class Character(pygame.sprite.Sprite):
+    brain_inputs = 5
+    brain_outputs = 4
     def __init__(self, world):
         super(Character, self).__init__()
 
@@ -61,18 +74,55 @@ class Character(pygame.sprite.Sprite):
         self._r = 25   # radius, m
         self._x = None # x coord, m
         self._y = None # y coord, m
-        self._angle = math.pi / 2 * 3 # radians clockwise from north
+        self._angle = math.pi / 2 # radians clockwise from north
         self._speed = 1 # m/s
 
-        self._energy = 1000 # J
+        self._energy = 500 # J
         self._energy_burn_rate = 50 # J/s
         self._age = 0.0 # s
+        self._eating = 0.0 # > 0 means eat
+        self._spawn = 0.0 # > 0 means try to reproduce
 
-        self.brain = Brain(4, 5, 3)
+        self.brain = None
 
         # Drawing
-        self.image = pygame.Surface((self._r * 2, self._r * 2), SRCALPHA).convert_alpha()
-        self.rect = self.image.get_rect()
+        if world:
+            self.image = pygame.Surface((self._r * 2, self._r * 2), SRCALPHA).convert_alpha()
+            self.rect = self.image.get_rect()
+
+    @classmethod
+    def from_genome(cls, world, genome):
+        self = cls(world)
+        
+        self._r = 1 + (31 & struct.unpack('!B', genome.data[:1])[0])
+        num_hidden_neurons = 1 + (7 & struct.unpack('!B', genome.data[1:2])[0])
+        input_weights = []
+        output_weights = []
+        pos = 2
+        for i in range(num_hidden_neurons):
+            row = []
+            for j in range(cls.brain_inputs):
+                data = genome.data[pos:pos + 4]
+                value = 0
+                if len(data) == 4:
+                    value = struct.unpack('!i', data)[0] / float(2**31)
+                row.append(value)
+                pos += 4
+            input_weights.append(row)
+        for i in range(cls.brain_outputs):
+            row = []
+            for j in range(num_hidden_neurons):
+                data = genome.data[pos:pos + 4]
+                value = 0
+                if len(data) == 4:
+                    value = struct.unpack('!i', data)[0] / float(2**31)
+                row.append(value)
+                pos += 4
+            output_weights.append(row)
+
+        self.brain = Brain(input_weights, output_weights)
+        self._genome = genome
+        return self
 
     @property
     def colour(self):
@@ -95,8 +145,9 @@ class Character(pygame.sprite.Sprite):
             self.world.allcharacters.remove(self)
             return
 
-        # brain
+        # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
+            1,
             self._angle,
             self._speed,
             self._energy,
@@ -106,6 +157,7 @@ class Character(pygame.sprite.Sprite):
             self._angle,
             self._speed,
             self._eating,
+            self._spawn,
         ) = self.brain.process(*inputs)
 
         # eating:
@@ -115,6 +167,21 @@ class Character(pygame.sprite.Sprite):
             if current_tile.nutrition > amount_to_eat:
                 self._energy += amount_to_eat
                 current_tile.nutrition -= amount_to_eat
+        
+        # reproducing
+        if self._spawn > 0:
+            if self._energy > 1000:
+                self._energy -= 1000
+                newgenome = self._genome.mutate()
+                newchar = self.__class__.from_genome(self.world, newgenome)
+                newchar.x = self.x
+                newchar.y = self.y
+                op = operator.sub
+                while pygame.sprite.spritecollideany(newchar, self.world.allcharacters):
+                    newchar.x = op(newchar.x, 1)
+                    if newchar.x < 1:
+                        op = operator.add
+                self.world.allcharacters.add(newchar)
 
         # speed and position:
         prev_x, prev_y = self.x, self.y
@@ -135,11 +202,14 @@ class Character(pygame.sprite.Sprite):
         eye_pos[0] += int((self._r - 5) * math.sin(self._angle))
         eye_pos[1] -= int((self._r - 5) * math.cos(self._angle))
         pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
-    
+        font = pygame.font.Font(None, 24)
+        text = font.render(str(self._energy), True, (0, 0, 0))
+        self.image.blit(text, (self._r, self._r))
+
     @property
     def x(self):
         return self._x
-    
+
     @x.setter
     def x(self, value):
         self._x = value
@@ -167,6 +237,7 @@ class Character(pygame.sprite.Sprite):
             "Character:",
             "age: %s" % self._age,
             "eating: %s" % self._eating,
+            "spawn: %s" % self._spawn,
             "energy: %s" % self._energy,
             "r: %s" % self._r,
             "angle: %s" % self._angle,
@@ -174,3 +245,4 @@ class Character(pygame.sprite.Sprite):
             "x: %s" % self._x,
             "y: %s" % self._y,
         ])
+
