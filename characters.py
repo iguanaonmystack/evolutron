@@ -33,6 +33,7 @@ class Neuron(object):
 
 class Brain(object):
     def __init__(self, inputs=2, hidden_neurons=5, outputs=1):
+        self.inputs = inputs
         self.hidden0 = []
         for i in range(hidden_neurons):
             self.hidden0.append(Neuron(inputs))
@@ -41,6 +42,7 @@ class Brain(object):
             self.outputs.append(Neuron(hidden_neurons, fn=None))
 
     def process(self, *input_values):
+        assert len(input_values) == self.inputs, (input_values, self.inputs)
         inputs = [Neuron(0, value) for value in input_values]
         for neuron in self.hidden0:
             neuron.process(inputs)
@@ -56,16 +58,20 @@ class Character(pygame.sprite.Sprite):
         self.world = world
 
         # Physical properties
-        self.r = 25  # radius
-        self._x = None
-        self._y = None
-        self._angle = math.pi / 2 * 3
-        self._speed = 1
+        self._r = 25   # radius, m
+        self._x = None # x coord, m
+        self._y = None # y coord, m
+        self._angle = math.pi / 2 * 3 # radians clockwise from north
+        self._speed = 1 # m/s
 
-        self.brain = Brain(2, 5, 2)
+        self._energy = 1000 # J
+        self._energy_burn_rate = 50 # J/s
+        self._age = 0.0 # s
+
+        self.brain = Brain(4, 5, 3)
 
         # Drawing
-        self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
+        self.image = pygame.Surface((self._r * 2, self._r * 2), SRCALPHA).convert_alpha()
         self.rect = self.image.get_rect()
 
     @property
@@ -76,11 +82,45 @@ class Character(pygame.sprite.Sprite):
     def colour(self, color):
        self.image.fill(color)
     
-    def update(self):
-        self._angle, self._speed = self.brain.process(self._angle, self._speed)
+    def update(self, dt):
+        # observing world
+        current_tile = [
+            t for t in self.world.alltiles
+            if t.rect.collidepoint(self._x + self._r, self.y + self._r)][0]
+
+        # energy and age:
+        self._age += dt
+        self._energy -= self._energy_burn_rate * dt
+        if self._energy <= 0:
+            self.world.allcharacters.remove(self)
+            return
+
+        # brain
+        inputs = (
+            self._angle,
+            self._speed,
+            self._energy,
+            current_tile.nutrition,
+        )
+        outputs = (
+            self._angle,
+            self._speed,
+            self._eating,
+        ) = self.brain.process(*inputs)
+
+        # eating:
+        if self._eating > 0:
+            eating_rate = 100 # J/s
+            amount_to_eat = eating_rate * dt
+            if current_tile.nutrition > amount_to_eat:
+                self._energy += amount_to_eat
+                current_tile.nutrition -= amount_to_eat
+
+        # speed and position:
         prev_x, prev_y = self.x, self.y
-        self.x += self._speed * math.sin(self._angle)
-        self.y -= self._speed * math.cos(self._angle)
+        ddist = self._speed * dt
+        self.x += ddist * math.sin(self._angle)
+        self.y -= ddist * math.cos(self._angle)
         collided = pygame.sprite.spritecollide(self, self.world.allcharacters, 0)
         collided += pygame.sprite.spritecollide(self, self.world.allwalls, 0)
         for item in collided:
@@ -88,11 +128,12 @@ class Character(pygame.sprite.Sprite):
                 self.x = prev_x
                 self.y = prev_y
                 self._speed = 0
-
-        pygame.draw.circle(self.image, (0,255,0), (25,25), self.r, 0)
-        eye_pos = [self.r, self.r]
-        eye_pos[0] += int((self.r - 5) * math.sin(self._angle))
-        eye_pos[1] -= int((self.r - 5) * math.cos(self._angle))
+    
+        # drawing
+        pygame.draw.circle(self.image, (0,255,0), (25,25), self._r, 0)
+        eye_pos = [self._r, self._r]
+        eye_pos[0] += int((self._r - 5) * math.sin(self._angle))
+        eye_pos[1] -= int((self._r - 5) * math.cos(self._angle))
         pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
     
     @property
@@ -113,11 +154,21 @@ class Character(pygame.sprite.Sprite):
         self._y = value
         self.rect.y = value
 
+    @property
+    def r(self):
+        return self._r
+    
+    @r.setter
+    def r(self, value):
+        self._r = value
     
     def __str__(self):
         return '\n'.join([
             "Character:",
-            "r: %s" % self.r,
+            "age: %s" % self._age,
+            "eating: %s" % self._eating,
+            "energy: %s" % self._energy,
+            "r: %s" % self._r,
             "angle: %s" % self._angle,
             "speed: %s" % self._speed,
             "x: %s" % self._x,

@@ -16,8 +16,8 @@ class World(object):
         self.alltiles = pygame.sprite.Group()
         for i in range(self.w // tiles.Tile.default_w):
             for j in range(self.h // tiles.Tile.default_h):
-                block = tiles.Tile(i, j)
-                block.colour = (random.randint(0, 255), 0, 0)
+                block = tiles.Tile(i, j, max_nutrition=1000)
+                block.nutrition = random.randint(0, 1000)
                 self.alltiles.add(block)
 
         self.allwalls = pygame.sprite.Group()
@@ -41,7 +41,7 @@ class World(object):
     
     def update(self, dt):
         for group in (self.alltiles, self.allwalls, self.allcharacters):
-            group.update()
+            group.update(dt)
 
     def frame(self, tick_progress):
         for group in (self.alltiles, self.allwalls, self.allcharacters):
