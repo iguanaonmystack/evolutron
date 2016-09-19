@@ -261,7 +261,6 @@ class Character(pygame.sprite.Sprite):
             if item is not self:
                 self.x = prev_x
                 self.y = prev_y
-                self._speed = 0
     
     @property
     def x(self):
