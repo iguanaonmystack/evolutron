@@ -136,7 +136,7 @@ class Character(pygame.sprite.Sprite):
     def draw(self):
         self.rect.x = self._x
         self.rect.y = self._y
-        pygame.draw.circle(self.image, (255,255,0), (25,25), self.r, 0)
+        pygame.draw.circle(self.image, (255,255,0), (self.r, self.r), self.r, 0)
         eye_pos = [self.r, self.r]
         eye_pos[0] += int((self.r - 5) * math.sin(self._angle))
         eye_pos[1] -= int((self.r - 5) * math.cos(self._angle))
