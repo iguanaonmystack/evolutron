@@ -85,7 +85,7 @@ class World(object):
         self.background = background
 
  
-    def drag(self, rel):
+    def ondrag(self, rel):
         size = self.w, self.h
         for i in (0, 1):
             self.viewport_offset[i] = self.viewport_offset[i] + rel[i]
@@ -95,7 +95,8 @@ class World(object):
                 self.viewport_offset[i] = - size[i] + self.viewport_size[i];
 
 
-    def click(self, pos):
+    def onclick(self, screenpos):
+        pos = [screenpos[i] - self.viewport_offset[i] for i in (0, 1)]
         clicked_sprites = [s for s in self.allcharacters if s.rect.collidepoint(pos)]
         if clicked_sprites:
             self.active_item = clicked_sprites[0]
