@@ -44,10 +44,10 @@ def main():
             elif event.type == MOUSEBUTTONUP:
                 mousedown_pos = None
                 if not mouse_was_dragged:
-                    world.click(event.dict['pos'])
+                    world.onclick(event.dict['pos'])
             elif event.type == MOUSEMOTION and mousedown_pos is not None:
                 mouse_was_dragged = True
-                world.drag(event.dict['rel'])
+                world.ondrag(event.dict['rel'])
 
 
 if __name__ == '__main__':
