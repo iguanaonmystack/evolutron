@@ -23,6 +23,7 @@ def main():
     clock = gameclock.GameClock(
         max_ups=60,     # game running speed
         max_fps=60,     # supposed max fps
+        use_wait=True,
         update_callback=world.update,
         frame_callback=world.frame,
         paused_callback=None)

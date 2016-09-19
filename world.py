@@ -16,12 +16,17 @@ class World(object):
         self.h = h
         self.resize(1000, 1000)
         self.viewport_offset = [0, 0]
-    
+
+        self.tile_w = 100
+        self.tile_h = 100
         self.alltiles = group.Group()
-        for i in range(self.w // tiles.Tile.default_w):
-            for j in range(self.h // tiles.Tile.default_h):
-                block = tiles.Tile(i, j, max_nutrition=random.randint(0, 255))
+        self.alltiles_coords = {}
+        for i in range(self.w // self.tile_w):
+            for j in range(self.h // self.tile_h):
+                block = tiles.Tile(i, j, self.tile_w, self.tile_h,
+                                   max_nutrition=random.randint(0, 255))
                 self.alltiles.add(block)
+                self.alltiles_coords[i, j] = block
 
         self.allwalls = group.Group()
         self.allwalls.add(tiles.Tile(0, -1, self.w, 100))
@@ -43,12 +48,14 @@ class World(object):
         self.allcharacters.add(character)
 
     def update(self, dt):
+        print dt
         while len(self.allcharacters) < MIN_CHARACTERS:
             self._create_character()
         for group in (self.alltiles, self.allwalls, self.allcharacters):
             group.update(dt)
 
     def frame(self, tick_progress):
+        print 'frame', tick_progress
         for group in (self.alltiles, self.allwalls, self.allcharacters):
             group.draw(self.background)
         self.screen.blit(self.background, self.viewport_offset)
