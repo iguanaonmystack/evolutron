@@ -2,8 +2,9 @@ import pygame
 from pygame.locals import *
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, x, y, w, h, max_nutrition=255):
+    def __init__(self, world, x, y, w, h, max_nutrition=255):
         pygame.sprite.Sprite.__init__(self)
+        self.world = world
         self._x = x
         self._y = y
         self._w = w
@@ -16,6 +17,7 @@ class Tile(pygame.sprite.Sprite):
         
         self.image = pygame.Surface((self._w, self._h)).convert()
         self.image.fill((0,0,255))
+        self.last_fill = (0,0,255)
 
         self.rect = self.image.get_rect()
 
@@ -30,15 +32,20 @@ class Tile(pygame.sprite.Sprite):
         self._nutrition = value
     
     def update(self, dt):
-        self._nutrition += 50 * dt
+        self._nutrition += 25 * dt
         if self._nutrition > self._max_nutrition:
             self._nutrition = self._max_nutrition
         
     def draw(self):
-        if self._max_nutrition == 0:
-            self.image.fill((0, 0, 0))
-            return
-        self.image.fill((int(self._nutrition), 0, 0))
+        new_fill = (int(self._nutrition), 0, 0)
+        if new_fill != self.last_fill:
+            self.last_fill = new_fill
+            self.image.fill(new_fill)
+        if self.world.active_item is self:
+            pygame.draw.lines(self.image, (0, 0, 255), 1, [
+                (0, 0), (self._w - 1, 0), (self._w - 1, self._h - 1), (0, self._h - 1)
+            ], 3)
+            self.last_fill = None
 
     def __str__(self):
         return '\n'.join([
