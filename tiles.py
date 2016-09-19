@@ -2,10 +2,7 @@ import pygame
 from pygame.locals import *
 
 class Tile(pygame.sprite.Sprite):
-    default_w = 100
-    default_h = 100
-
-    def __init__(self, x, y, w=default_w, h=default_h, max_nutrition=255):
+    def __init__(self, x, y, w, h, max_nutrition=255):
         pygame.sprite.Sprite.__init__(self)
         self._x = x
         self._y = y

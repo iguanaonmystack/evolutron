@@ -95,7 +95,7 @@ class Character(pygame.sprite.Sprite):
         self = cls(world)
         
         genedata = genome.data
-        self.r = genedata[0]
+        self.r = int(genedata[0])
         num_hidden_neurons = genedata[1]
         input_weights = []
         output_weights = []
@@ -149,16 +149,22 @@ class Character(pygame.sprite.Sprite):
         self.world.allcharacters.remove(self)
 
     def update(self, dt):
-        t1 = time.time()
+        world = self.world
+
         # observing world
-        current_tiles = [
-            t for t in self.world.alltiles
-            if t.rect.collidepoint(self._x + self.r, self.y + self.r)]
-        if not current_tiles:
-            # oops, off the map
+        if self._x < 0 or self._y < 0 \
+        or self._x > world.w or self._y > world.h:
             self.die()
             return
-        current_tile = current_tiles[0]
+        else:
+            current_walls = [
+                t for t in world.allwalls
+                if t.rect.collidepoint(self._x + self.r, self.y + self.r)]
+            if current_walls:
+                # oops, off the map
+                self.die()
+                return
+        current_tile = world.alltiles_coords[self._x // world.tile_w, self._y // world.tile_h]
 
         # energy and age:
         self._age += dt
@@ -195,35 +201,30 @@ class Character(pygame.sprite.Sprite):
         if self._spawn > 0:
             if self._energy > 1000:
                 self._energy -= 1000
+                print "spawning new character"
                 newgenome = self._genome.mutate()
-                newchar = self.__class__.from_genome(self.world, newgenome)
+                newchar = self.__class__.from_genome(world, newgenome)
                 newchar.x = self._x
                 newchar.y = self._y
                 op = operator.sub
-                while pygame.sprite.spritecollideany(newchar, self.world.allcharacters):
+                while pygame.sprite.spritecollideany(newchar, world.allcharacters):
                     newchar.x = op(newchar.x, 1)
                     if newchar.x < 1:
                         op = operator.add
-                self.world.allcharacters.add(newchar)
+                world.allcharacters.add(newchar)
 
         # speed and position:
         prev_x, prev_y = self._x, self._y
         ddist = self._speed * dt
         self.x += ddist * math.sin(self._angle)
         self.y -= ddist * math.cos(self._angle)
-        collided = pygame.sprite.spritecollide(self, self.world.allcharacters, 0)
-        collided += pygame.sprite.spritecollide(self, self.world.allwalls, 0)
+        collided = pygame.sprite.spritecollide(self, world.allcharacters, 0)
+        collided += pygame.sprite.spritecollide(self, world.allwalls, 0)
         for item in collided:
             if item is not self:
                 self.x = prev_x
                 self.y = prev_y
                 self._speed = 0
-        if self._x < 0 or self._y < 0 or self._x > self.world.w or self._y > self.world.h:
-            self.die()
-            return
-
-        t2 = time.time()
-        self.draw()
     
     @property
     def x(self):
