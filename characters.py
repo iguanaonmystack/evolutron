@@ -94,13 +94,13 @@ if use_numpy:
 class Character(pygame.sprite.Sprite):
     brain_inputs = 5
     brain_outputs = 4
-    def __init__(self, world):
+    def __init__(self, world, radius):
         super(Character, self).__init__()
 
         self.world = world
 
         # Physical properties
-        self.r = 25   # radius, m
+        self.r = radius   # radius, m
         self._x = None # x coord, m
         self._y = None # y coord, m
         self._angle = math.pi / 2 # radians clockwise from north
@@ -116,16 +116,15 @@ class Character(pygame.sprite.Sprite):
 
         # Drawing
         if world:
-            self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
+            self.image = pygame.Surface((self.r * 2 + 4, self.r * 2 + 4), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
 
     @classmethod
     def from_genome(cls, world, genome):
-        self = cls(world)
         
         genedata = genome.data
-        self.r = int(genedata[0])
-        num_hidden_neurons = genedata[1]
+        self = cls(world, int(genedata[0]))
+        num_hidden_neurons = int(genedata[1])
         input_weights = []
         output_weights = []
         pos = 2
@@ -165,14 +164,21 @@ class Character(pygame.sprite.Sprite):
     def draw(self):
         self.rect.x = self._x
         self.rect.y = self._y
-        pygame.draw.circle(self.image, (255,255,0), (self.r, self.r), self.r, 0)
-        eye_pos = [self.r, self.r]
+        r_r = (self.r + 2, self.r + 2)
+        liveness = int(min(1.0, self._energy / 2000 + 0.5) * 255)
+        pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
+        eye_pos = list(r_r)
         eye_pos[0] += int((self.r - 5) * math.sin(self._angle))
         eye_pos[1] -= int((self.r - 5) * math.cos(self._angle))
         pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
-        font = pygame.font.Font(None, 24)
-        text = font.render(str(self._energy), True, (0, 0, 0))
-        self.image.blit(text, (self.r, self.r))
+
+        if self.world.active_item is self:
+            border = (0, 0, 255, 255)
+        else:
+            border = (0, 0, 0, 0)
+        pygame.draw.lines(self.image, border, 1, [
+            (0, 0), (self.rect.w - 1, 0), (self.rect.w - 1, self.rect.h - 1), (0, self.rect.h - 1)
+        ], 3)
 
     def die(self):
         self.world.allcharacters.remove(self)
@@ -245,8 +251,10 @@ class Character(pygame.sprite.Sprite):
         # speed and position:
         prev_x, prev_y = self._x, self._y
         ddist = self._speed * dt
-        self.x += ddist * math.sin(self._angle)
-        self.y -= ddist * math.cos(self._angle)
+        x = self._x + ddist * math.sin(self._angle)
+        y = self._y - ddist * math.cos(self._angle)
+        self.x = min(max(0, x), self.world.w - self.r)
+        self.y = min(max(0, y), self.world.h - self.r)
         collided = pygame.sprite.spritecollide(self, world.allcharacters, 0)
         collided += pygame.sprite.spritecollide(self, world.allwalls, 0)
         for item in collided:

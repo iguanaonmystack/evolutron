@@ -23,19 +23,19 @@ class World(object):
         self.alltiles_coords = {}
         for i in range(self.w // self.tile_w):
             for j in range(self.h // self.tile_h):
-                block = tiles.Tile(i, j, self.tile_w, self.tile_h,
+                block = tiles.Tile(self, i, j, self.tile_w, self.tile_h,
                                    max_nutrition=random.randint(0, 255))
                 self.alltiles.add(block)
                 self.alltiles_coords[i, j] = block
 
         self.allwalls = group.Group()
-        self.allwalls.add(tiles.Tile(0, -1, self.w, 100))
-        self.allwalls.add(tiles.Tile(self.w / 100, 0, 100, self.h))
-        self.allwalls.add(tiles.Tile(0, self.h / 100, self.w, 100))
-        self.allwalls.add(tiles.Tile(-1, 0, 100, self.h))
+        self.allwalls.add(tiles.Tile(self, 0, -1, self.w, 100))
+        self.allwalls.add(tiles.Tile(self, self.w / 100, 0, 100, self.h))
+        self.allwalls.add(tiles.Tile(self, 0, self.h / 100, self.w, 100))
+        self.allwalls.add(tiles.Tile(self, -1, 0, 100, self.h))
         
         self.allcharacters = group.Group()
-        self.display_item = None
+        self.active_item = None
 
     def _create_character(self):
         g = genome.Genome.from_random()
@@ -60,8 +60,8 @@ class World(object):
             group.draw(self.background)
         self.screen.blit(self.background, self.viewport_offset)
         font = pygame.font.Font(None, 18)
-        if self.display_item:
-            s = str(self.display_item)
+        if self.active_item:
+            s = str(self.active_item)
             off = 0
             for line in s.split('\n'):
                 text = font.render(line, True, (0, 0, 0))
@@ -71,7 +71,6 @@ class World(object):
                 self.screen.blit(image, (0, 0 + off))
                 self.screen.blit(text, (0, 0 + off))
                 off += rect.h
-        #pygame.display.update()
         pygame.display.flip()
 
 
@@ -99,14 +98,14 @@ class World(object):
     def click(self, pos):
         clicked_sprites = [s for s in self.allcharacters if s.rect.collidepoint(pos)]
         if clicked_sprites:
-            self.display_item = clicked_sprites[0]
+            self.active_item = clicked_sprites[0]
             return
         
         clicked_tiles = [t for t in self.alltiles if t.rect.collidepoint(pos)]
         if clicked_tiles:
-            self.display_item = clicked_tiles[0]
+            self.active_item = clicked_tiles[0]
             return
         
-        self.display_item = None
+        self.active_item = None
 
 
