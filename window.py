@@ -6,6 +6,7 @@ from pygame.locals import *
 import group
 import world
 import infopane
+import brainview
 
 class Window(object):
     """Logical representation of the application window."""
@@ -23,6 +24,9 @@ class Window(object):
         self.infopane = infopane.InfoPane(self, Rect(0, 0, 200, 500))
         self.allsprites.add(self.infopane)
 
+        self.brainview = brainview.BrainView(self, Rect(0, 500, 200, 500))
+        self.allsprites.add(self.brainview)
+
     def onresize(self, window_w, window_h):
         self.window_size = window_w, window_h
         self.screen = pygame.display.set_mode(self.window_size, RESIZABLE)
@@ -30,6 +34,7 @@ class Window(object):
         self.background = pygame.Surface(self.window_size).convert()
         if hasattr(self, 'world'):
             self.world.resize(Rect(200, 0, window_w - 200, window_h))
+            self.brainview.resize(Rect(0, 500, 200, window_h - 500))
 
     def update(self, dt):
         self.world.update(dt)

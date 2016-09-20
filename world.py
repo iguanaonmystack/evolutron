@@ -78,6 +78,10 @@ class World(viewport.Viewport):
 
             if clicked_sprites:
                 self.active_item = clicked_sprites[0]
+                if hasattr(self.active_item, '_genome'):
+                    self.parent.brainview.brain = self.active_item.brain
+                else:
+                    self.parent.brainview.brain = None
                 return
             
         self.active_item = None
