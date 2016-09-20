@@ -16,7 +16,7 @@ class InfoPane(viewport.Viewport):
     def draw(self):
         if self._text_changed:
             self.canvas.fill((255, 255, 255))
-            s = self._text
+            s = str(self._text)
             off = 0
             for line in s.split('\n'):
                 text = self.font.render(line, True, (0, 0, 0))

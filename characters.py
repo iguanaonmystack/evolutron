@@ -47,6 +47,7 @@ class Brain(object):
         '''
         self.input_weights = input_weights
         self.output_weights = output_weights
+        self.inputs = [Neuron([], 0) for i in range(len(input_weights))]
         self.hidden0 = []
         for neuron_input_weights in input_weights:
             self.hidden0.append(Neuron(neuron_input_weights))
@@ -55,9 +56,10 @@ class Brain(object):
             self.outputs.append(Neuron(output_neuron_weights, fn=None))
 
     def process(self, *input_values):
-        inputs = [Neuron([], value) for value in input_values]
+        for neuron, input_value in zip(self.inputs, input_values):
+            neuron.value = input_value
         for neuron in self.hidden0:
-            neuron.process(inputs)
+            neuron.process(self.inputs)
         for output in self.outputs:
             output.process(self.hidden0)
         return [output.value for output in self.outputs]

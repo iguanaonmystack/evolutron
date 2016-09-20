@@ -21,7 +21,7 @@ class Genome(object):
         ]
         num_weights = characters.Character.brain_inputs + characters.Character.brain_outputs
         for i in range(num_hidden_neurons * num_weights):
-            gene.append(random.randint(-128, 127))
+            gene.append(random.random())
         return cls(gene)
 
     def mutate(self, rate=0.01):
