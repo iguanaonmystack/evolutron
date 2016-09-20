@@ -9,13 +9,13 @@ import gameclock
 
 import tiles
 import characters
-import world as _world
+import window as _window
 
 def main():
     pygame.init()
 
     world_size = (2000,2000)
-    world = _world.World(*world_size)
+    window = _window.Window(*world_size)
 
     mousedown_pos = None
     mouse_was_dragged = False
@@ -24,8 +24,8 @@ def main():
         max_ups=60,     # game running speed
         max_fps=60,     # supposed max fps
         use_wait=True,
-        update_callback=world.update,
-        frame_callback=world.frame,
+        update_callback=window.update,
+        frame_callback=window.frame,
         paused_callback=None)
     while 1:
         clock.tick()
@@ -37,17 +37,18 @@ def main():
                 if event.key == K_ESCAPE or event.key == K_q:
                     return
             elif event.type==VIDEORESIZE:
-                world.resize(*event.dict['size'])
+                window.onresize(*event.dict['size'])
             elif event.type == MOUSEBUTTONDOWN:
                 mousedown_pos = event.dict['pos']
                 mouse_was_dragged = False
             elif event.type == MOUSEBUTTONUP:
                 mousedown_pos = None
+                button = event.dict['button'] #1/2/3=left/middle/right, 4/5=wheel
                 if not mouse_was_dragged:
-                    world.onclick(event.dict['pos'])
+                    window.onclick(event.dict['pos'], button)
             elif event.type == MOUSEMOTION and mousedown_pos is not None:
                 mouse_was_dragged = True
-                world.ondrag(event.dict['rel'])
+                window.ondrag(mousedown_pos, event.dict['rel'])
 
 
 if __name__ == '__main__':

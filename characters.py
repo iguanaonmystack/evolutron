@@ -188,7 +188,7 @@ class Character(pygame.sprite.Sprite):
 
         # observing world
         if self._x < 0 or self._y < 0 \
-        or self._x > world.w or self._y > world.h:
+        or self._x > world.canvas_w or self._y > world.canvas_h:
             self.die()
             return
         else:
@@ -253,8 +253,8 @@ class Character(pygame.sprite.Sprite):
         ddist = self._speed * dt
         x = self._x + ddist * math.sin(self._angle)
         y = self._y - ddist * math.cos(self._angle)
-        self.x = min(max(0, x), self.world.w - self.r)
-        self.y = min(max(0, y), self.world.h - self.r)
+        self.x = min(max(0, x), self.world.canvas_w - self.r)
+        self.y = min(max(0, y), self.world.canvas_h - self.r)
         collided = pygame.sprite.spritecollide(self, world.allcharacters, 0)
         collided += pygame.sprite.spritecollide(self, world.allwalls, 0)
         for item in collided:
