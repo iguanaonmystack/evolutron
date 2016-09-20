@@ -5,7 +5,7 @@ from pygame.locals import *
 import viewport
 
 def neuron_centre(layer, node_index):
-    return (20 + 75 * layer, 20 + 60 * node_index)
+    return [20 + 75 * layer, 40 + 60 * node_index]
 
 class BrainView(viewport.Viewport):
 
@@ -21,10 +21,22 @@ class BrainView(viewport.Viewport):
             return
 
         self.canvas.fill((0, 0, 0))
+        
+        input_labels = ('const', 'angle', 'speed', 'energy', 'tile_nut')
+        hidden_labels = ()
+        output_labels = ('angle', 'speed', 'eating', 'spawn')
+
+        for i, layer in enumerate((input_labels, hidden_labels, output_labels)):
+            for j, label in enumerate(layer):
+                centrepos = neuron_centre(i, j)
+                centrepos[0] -= 20
+                centrepos[1] -= 30
+                text = self.font.render(label, True, (255, 255, 255))
+                self.canvas.blit(text, centrepos)
 
         for i, layer in enumerate((brain.inputs, brain.hidden0, brain.outputs)):
             for j, neuron in enumerate(layer):
-
+                # draw axons
                 for k, weight in enumerate(neuron.input_weights):
                     colour = (int(weight * 256),) * 3
 
@@ -34,7 +46,7 @@ class BrainView(viewport.Viewport):
 
         for i, layer in enumerate((brain.inputs, brain.hidden0, brain.outputs)):
             for j, neuron in enumerate(layer):
-
+                # draw neurons
                 centrepos = neuron_centre(i, j)
                 pygame.draw.circle(self.canvas, (128, 255, 128), centrepos, 20, 0)
 

@@ -47,6 +47,10 @@ class World(viewport.Viewport):
             character.x = random.randint(0, self.canvas_w - character.r * 2)
             character.y = random.randint(0, self.canvas_h - character.r * 2)
         self.allcharacters.add(character)
+        # debugging:
+        if self.active_item is None:
+            self.active_item = character
+            self.parent.brainview.brain = character.brain
 
     def update(self, dt):
         while len(self.allcharacters) < MIN_CHARACTERS:
