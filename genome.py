@@ -16,7 +16,7 @@ class Genome(object):
         '''
         num_hidden_neurons = random.randint(1, 8)
         gene = [
-            random.randint(0, 16),
+            random.randint(3, 16),
             num_hidden_neurons,
         ]
         num_weights = characters.Character.brain_inputs + characters.Character.brain_outputs

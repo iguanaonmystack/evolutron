@@ -151,6 +151,7 @@ class Character(pygame.sprite.Sprite):
                 pos += 1
             output_weights.append(row)
 
+        print "input_weights", len(input_weights)
         self.brain = Brain(input_weights, output_weights)
         self._genome = genome
         return self
@@ -212,10 +213,10 @@ class Character(pygame.sprite.Sprite):
 
         # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
-            1,
+            -1,
             self._angle,
             self._speed,
-            self._energy,
+            self._energy / 1000,
             current_tile.nutrition,
         )
         outputs = self.brain.process(*inputs)
