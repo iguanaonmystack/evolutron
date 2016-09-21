@@ -38,7 +38,8 @@ class BrainView(viewport.Viewport):
             for j, neuron in enumerate(layer):
                 # draw axons
                 for k, weight in enumerate(neuron.input_weights):
-                    colour = (int(weight * 256),) * 3
+                    norm_weight = int(weight * 128 + 128) # [0, 256)
+                    colour = (255 - norm_weight, 255 - norm_weight, 255)
 
                     start = neuron_centre(i - 1, k)
                     end = neuron_centre(i, j)
