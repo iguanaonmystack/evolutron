@@ -1,4 +1,6 @@
+import os
 import sys
+import argparse
 import random
 random.seed(100)
 
@@ -12,13 +14,29 @@ import characters
 import window as _window
 
 def main():
+    parser = argparse.ArgumentParser(description='An evolution simulator')
+    parser.add_argument(
+        '--screenshot', dest='screenshot', action='store', default=False,
+        help='Take a screenshot and exit')
+    args = parser.parse_args()
+
+    if args.screenshot:
+        os.environ['SDL_VIDEODRIVER'] = 'dummy'
     pygame.init()
 
-    world_size = (2000,2000)
-    window = _window.Window(*world_size)
+    screen = pygame.display.set_mode((1000, 1000), RESIZABLE, 32)
+    window = _window.Window(screen, 2000, 2000)
 
     mousedown_pos = None
     mouse_was_dragged = False
+
+    if args.screenshot:
+        os.putenv('SDL_VIDEODRIVER', 'fbcon')
+        pygame.display.init()
+        window.update(1)
+        window.frame(0)
+        pygame.image.save(window.screen, args.screenshot)
+        return
 
     clock = gameclock.GameClock(
         max_ups=60,     # game running speed
@@ -27,6 +45,7 @@ def main():
         update_callback=window.update,
         frame_callback=window.frame,
         paused_callback=None)
+
     while 1:
         clock.tick()
 
@@ -37,6 +56,8 @@ def main():
                 if event.key == K_ESCAPE or event.key == K_q:
                     return
             elif event.type==VIDEORESIZE:
+                screen = pygame.display.set_mode((1000, 1000), RESIZABLE)
+                window.screen = screen
                 window.onresize(*event.dict['size'])
             elif event.type == MOUSEBUTTONDOWN:
                 mousedown_pos = event.dict['pos']
