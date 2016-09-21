@@ -6,28 +6,22 @@ class Genome(object):
         self.data = data
 
     @classmethod
-    def from_random(cls):
-        import characters
-        # gene format:
-        '''
-            radius (8 bits, values above 25 ignored)
-            num_hidden_neurons (8 bits, values above 8 ignored)
-            neuron_weights flatened (struct.pack int), normalised to -1/1
-        '''
+    def from_random(cls, inputs, outputs):
+        radius = random.randint(3, 16)
         num_hidden_neurons = random.randint(1, 8)
         gene = [
-            random.randint(3, 16),
-            num_hidden_neurons,
+            radius,
+            num_hidden_neurons
         ]
-        num_weights = characters.Character.brain_inputs + characters.Character.brain_outputs
+        num_weights = inputs + outputs
         for i in range(num_hidden_neurons * num_weights):
-            gene.append(random.random())
+            gene.append(random.random() * 2 - 1)
         return cls(gene)
 
     def mutate(self, rate=0.01):
         newdata = self.data[:]
         for i, part in enumerate(newdata):
-            r = random.random()
+            r = random.random() * 2 - 1
             if r < rate:
                 part += r * (part / 8)
             newdata[i] = part

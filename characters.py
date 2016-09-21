@@ -47,7 +47,8 @@ class Brain(object):
         '''
         self.input_weights = input_weights
         self.output_weights = output_weights
-        self.inputs = [Neuron([], 0) for i in range(len(input_weights))]
+        num_inputs = input_weights and len(input_weights[0]) or 0
+        self.inputs = [Neuron([], 0) for i in range(num_inputs)]
         self.hidden0 = []
         for neuron_input_weights in input_weights:
             self.hidden0.append(Neuron(neuron_input_weights))
@@ -122,8 +123,12 @@ class Character(pygame.sprite.Sprite):
             self.rect = self.image.get_rect()
 
     @classmethod
+    def from_random(cls, world):
+        g = genome.Genome.from_random(cls.brain_inputs, cls.brain_outputs)
+        return cls.from_genome(world, g)
+
+    @classmethod
     def from_genome(cls, world, genome):
-        
         genedata = genome.data
         self = cls(world, int(genedata[0]))
         num_hidden_neurons = int(genedata[1])
@@ -151,7 +156,6 @@ class Character(pygame.sprite.Sprite):
                 pos += 1
             output_weights.append(row)
 
-        print "input_weights", len(input_weights)
         self.brain = Brain(input_weights, output_weights)
         self._genome = genome
         return self
@@ -213,7 +217,7 @@ class Character(pygame.sprite.Sprite):
 
         # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
-            -1,
+            1,
             self._angle,
             self._speed,
             self._energy / 1000,
