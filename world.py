@@ -6,7 +6,6 @@ from pygame.locals import *
 import viewport
 import tiles
 import characters
-import genome
 import group
 
 MIN_CHARACTERS = 100
@@ -40,8 +39,7 @@ class World(viewport.Viewport):
         self.active_item = None
 
     def _create_character(self):
-        g = genome.Genome.from_random()
-        character = characters.Character.from_genome(self, g)
+        character = characters.Character.from_random(self)
         while character._x is None \
         or pygame.sprite.spritecollideany(character, self.allcharacters):
             character.x = random.randint(0, self.canvas_w - character.r * 2)
