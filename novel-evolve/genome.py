@@ -7,7 +7,7 @@ class Genome(object):
 
     @classmethod
     def from_random(cls, inputs, outputs):
-        radius = random.randint(3, 16)
+        radius = random.randint(5, 20)
         num_hidden_neurons = random.randint(1, 8)
         gene = [
             radius,
