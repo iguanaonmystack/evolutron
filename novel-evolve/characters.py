@@ -261,7 +261,8 @@ class Character(pygame.sprite.Sprite):
 
         # movement:
         prev_x, prev_y = self._x, self._y
-        ddist = self._speed + (self._acceleration * dt)
+        self._speed += (self._acceleration * dt)
+        ddist = self._speed * dt
         self._angle = (self._angle + (self._angle_change * dt)) % (2 * math.pi)
         x = self._x + ddist * math.sin(self._angle)
         y = self._y - ddist * math.cos(self._angle)
@@ -273,6 +274,7 @@ class Character(pygame.sprite.Sprite):
             if item is not self:
                 self.x = prev_x
                 self.y = prev_y
+                self._speed = 0
     
     @property
     def x(self):
