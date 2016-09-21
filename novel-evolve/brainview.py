@@ -24,7 +24,7 @@ class BrainView(viewport.Viewport):
         
         input_labels = ('const', 'angle', 'speed', 'energy', 'tile_nut')
         hidden_labels = ()
-        output_labels = ('angle', 'speed', 'eating', 'spawn')
+        output_labels = ('angle ch', 'acc', 'eat', 'spawn')
 
         for i, layer in enumerate((input_labels, hidden_labels, output_labels)):
             for j, label in enumerate(layer):
