@@ -54,7 +54,7 @@ class Brain(object):
             self.hidden0.append(Neuron(neuron_input_weights))
         self.outputs = []
         for output_neuron_weights in output_weights:
-            self.outputs.append(Neuron(output_neuron_weights, fn=None))
+            self.outputs.append(Neuron(output_neuron_weights, fn=lambda x: x**3))
 
     def process(self, *input_values):
         for neuron, input_value in zip(self.inputs, input_values):
@@ -106,13 +106,17 @@ class Character(pygame.sprite.Sprite):
         self.r = radius   # radius, m
         self._x = None # x coord, m
         self._y = None # y coord, m
-        self._angle = math.pi / 2 # radians clockwise from north
-        self._speed = 1 # m/s
+
+        self._angle = math.pi / 2.0 # radians clockwise from north
+        self._angle_change = 0.0
+
+        self._speed = 0.0 # m/s
+        self._acceleration = 0.0 # m/s^2
 
         self._energy = 500 # J
         self._energy_burn_rate = 50 # J/s
         self._age = 0.0 # s
-        self._eating = 0.0 # > 0 means eat
+        self._eat = 0.0 # > 0 means eat
         self._spawn = 0.0 # > 0 means try to reproduce
 
         self.brain = None
@@ -225,21 +229,21 @@ class Character(pygame.sprite.Sprite):
         )
         outputs = self.brain.process(*inputs)
         (
-            self._angle,
-            self._speed, # TODO this should be acceleration
-            self._eating,
+            self._angle_change,
+            self._acceleration,
+            self._eat,
             self._spawn,
         ) = outputs
 
         # eating:
-        if self._eating > 0:
+        if self._eat > 0:
             eating_rate = 100 # J/s
             amount_to_eat = eating_rate * dt
             if current_tile.nutrition > amount_to_eat:
                 self._energy += amount_to_eat
                 current_tile.nutrition -= amount_to_eat
         
-        # reproducing
+        # reproducing:
         if self._spawn > 0:
             if self._energy > 1000:
                 self._energy -= 1000
@@ -255,9 +259,10 @@ class Character(pygame.sprite.Sprite):
                         op = operator.add
                 world.allcharacters.add(newchar)
 
-        # speed and position:
+        # movement:
         prev_x, prev_y = self._x, self._y
-        ddist = self._speed * dt
+        ddist = self._speed + (self._acceleration * dt)
+        self._angle = (self._angle + (self._angle_change * dt)) % (2 * math.pi)
         x = self._x + ddist * math.sin(self._angle)
         y = self._y - ddist * math.cos(self._angle)
         self.x = min(max(0, x), self.world.canvas_w - self.r)
@@ -291,7 +296,7 @@ class Character(pygame.sprite.Sprite):
         return '\n'.join([
             "Character:",
             "age: %s" % self._age,
-            "eating: %s" % self._eating,
+            "eat: %s" % self._eat,
             "spawn: %s" % self._spawn,
             "energy: %s" % self._energy,
             "r: %s" % self.r,
