@@ -11,8 +11,9 @@ import brainview
 class Window(object):
     """Logical representation of the application window."""
 
-    def __init__(self, world_w, world_h):
+    def __init__(self, screen, world_w, world_h):
 
+        self.screen = screen
         self.onresize(1000, 1000)
 
         self.allsprites = group.Group()
@@ -28,10 +29,7 @@ class Window(object):
         self.allsprites.add(self.brainview)
 
     def onresize(self, window_w, window_h):
-        self.window_size = window_w, window_h
-        self.screen = pygame.display.set_mode(self.window_size, RESIZABLE)
-
-        self.background = pygame.Surface(self.window_size).convert()
+        self.background = pygame.Surface(self.screen.get_size()).convert()
         if hasattr(self, 'world'):
             self.world.resize(Rect(200, 0, window_w - 200, window_h))
             self.brainview.resize(Rect(0, 500, 200, window_h - 500))
