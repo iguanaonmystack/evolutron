@@ -37,6 +37,7 @@ class World(viewport.Viewport):
         
         self.allcharacters = group.Group()
         self.active_item = None
+        self.age = 0.0
 
     def _create_character(self):
         character = characters.Character.from_random(self)
@@ -51,6 +52,7 @@ class World(viewport.Viewport):
             self.parent.brainview.brain = character.brain
 
     def update(self, dt):
+        self.age += dt
         while len(self.allcharacters) < MIN_CHARACTERS:
             self._create_character()
         for group in (self.alltiles, self.allwalls, self.allcharacters):
@@ -86,5 +88,6 @@ class World(viewport.Viewport):
                     self.parent.brainview.brain = None
                 return
             
+        self.parent.brainview.brain = None
         self.active_item = None
  
