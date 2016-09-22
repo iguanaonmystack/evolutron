@@ -15,8 +15,9 @@ def sigmoid(x):
     except OverflowError:
         return 0
 
-class Neuron(object):
+class Neuron(pygame.sprite.Sprite):
     def __init__(self, input_weights, initial_value=None, fn=sigmoid):
+        super(Neuron, self).__init__()
         self.fn = fn
         self.value = initial_value
         self.input_weights = input_weights[:]
@@ -29,8 +30,25 @@ class Neuron(object):
             self.value = self.fn(self.value)
 
     def __repr__(self):
-        return "Neuron(%r, %r) <%r>" % (self.input_weights, self.value, self.input_weights)
-    
+        return "Neuron(%r, %r, %r)" % (self.input_weights, self.value, self.fn)
+
+    def connect_viewport(self, viewport):
+        self.image = pygame.Surface((40, 40), SRCALPHA).convert_alpha()
+        self.rect = self.image.get_rect()
+        self.font = pygame.font.Font(None, 18)
+        self.viewport = viewport
+
+    def draw(self):
+        centrepos = (20, 20)
+        colour = 128, 255, 128
+        if self.viewport.active_item is self:
+            colour = 0, 255, 0
+        pygame.draw.circle(self.image, colour, centrepos, 20, 0)
+        text = self.font.render(str('%0.1f'%self.value), True, (0, 0, 0))
+        rect = text.get_rect()
+        textpos = centrepos[0] - rect.w // 2, centrepos[1] - rect.h // 2
+
+        self.image.blit(text, textpos)
 
 
 class Brain(object):
@@ -101,11 +119,13 @@ class Character(pygame.sprite.Sprite):
         super(Character, self).__init__()
 
         self.world = world
+        self.bred = 0
 
         # Physical properties
         self.r = radius   # radius, m
         self._x = None # x coord, m
         self._y = None # y coord, m
+        self._created = 0.0 # age of world
 
         self._angle = math.pi / 2.0 # radians clockwise from north
         self._angle_change = 0.0
@@ -123,6 +143,7 @@ class Character(pygame.sprite.Sprite):
 
         # Drawing
         if world:
+            self._created = world.age
             self.image = pygame.Surface((self.r * 2 + 4, self.r * 2 + 4), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
 
@@ -245,13 +266,14 @@ class Character(pygame.sprite.Sprite):
         
         # reproducing:
         if self._spawn > 0:
-            if self._energy > 1000:
-                self._energy -= 1000
-                print "spawning new character"
+            if self._energy > 500 and self._age > 5:
+                # the age limit is needed to stop a spawning loop
+                self._energy -= 500
                 newgenome = self._genome.mutate()
                 newchar = self.__class__.from_genome(world, newgenome)
                 newchar.x = self._x
                 newchar.y = self._y
+                newchar.bred = 1
                 op = operator.sub
                 while pygame.sprite.spritecollideany(newchar, world.allcharacters):
                     newchar.x = op(newchar.x, 1)
@@ -297,14 +319,15 @@ class Character(pygame.sprite.Sprite):
     def __str__(self):
         return '\n'.join([
             "Character:",
-            "age: %s" % self._age,
-            "eat: %s" % self._eat,
-            "spawn: %s" % self._spawn,
-            "energy: %s" % self._energy,
-            "r: %s" % self.r,
-            "angle: %s" % self._angle,
-            "speed: %s" % self._speed,
-            "x: %s" % self._x,
-            "y: %s" % self._y,
+            "created at: %.2fs" % self._created,
+            "age: %.2fs" % self._age,
+            "eat: %.2fs" % self._eat,
+            "spawn: %.2fs" % self._spawn,
+            "energy: %.2fJ" % self._energy,
+            "r: %dm" % self.r,
+            "angle: %.2f radians" % self._angle,
+            "speed: %.2fm/s" % self._speed,
+            "x: %dm E" % self._x,
+            "y: %dm S" % self._y,
         ])
 
