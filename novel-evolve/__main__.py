@@ -34,6 +34,7 @@ def main():
         os.putenv('SDL_VIDEODRIVER', 'fbcon')
         pygame.display.init()
         window.update(1)
+        window.update(1)
         window.frame(0)
         pygame.image.save(window.screen, args.screenshot)
         return
