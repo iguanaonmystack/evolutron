@@ -12,7 +12,7 @@ class BrainView(viewport.Viewport):
 
     def __init__(self, parent, viewport_rect):
         super(BrainView, self).__init__(
-            parent, viewport_rect, viewport_rect.w, viewport_rect.h)
+            parent, viewport_rect, viewport_rect.w, 1000)
         self._brain = None
         self.font = pygame.font.Font(None, 18)
         self.active_item = None

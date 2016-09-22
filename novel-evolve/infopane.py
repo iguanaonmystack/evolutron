@@ -8,7 +8,7 @@ class InfoPane(viewport.Viewport):
 
     def __init__(self, parent, viewport_rect):
         super(InfoPane, self).__init__(
-            parent, viewport_rect, viewport_rect.w, viewport_rect.h)
+            parent, viewport_rect, viewport_rect.w, 1000)
         self._text = ''
         self._text_changed = True
         self.font = pygame.font.Font(None, 18)
