@@ -55,8 +55,18 @@ def main():
             elif event.type == KEYDOWN:
                 if event.key == K_ESCAPE or event.key == K_q:
                     return
+                if event.key == K_ESCAPE or event.key == K_p:
+                    if clock.update_callback is None:
+                        clock.update_callback = window.update
+                    else:
+                        clock.update_callback = None
+                if event.key == K_ESCAPE or event.key == K_r:
+                    if clock.frame_callback is None:
+                        clock.frame_callback = window.frame
+                    else:
+                        clock.frame_callback = None
             elif event.type==VIDEORESIZE:
-                screen = pygame.display.set_mode((1000, 1000), RESIZABLE)
+                screen = pygame.display.set_mode(event.dict['size'], RESIZABLE)
                 window.screen = screen
                 window.onresize(*event.dict['size'])
             elif event.type == MOUSEBUTTONDOWN:
