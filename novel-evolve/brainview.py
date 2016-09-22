@@ -66,11 +66,12 @@ class BrainView(viewport.Viewport):
                         if neuron is not self.active_item \
                         and i and layers[i-1][k] is not self.active_item:
                             continue
+
+                    val = int(min(abs(weight) * 255, 255))
                     if weight > 0:
-                        val = int(weight * 255)
                         colour = (0, val, val)
                     else:
-                        colour = (int(-weight * 255), 0, 0)
+                        colour = (val, 0, 0)
                     start = neuron_centre(i - 1, k)
                     end = neuron_centre(i, j)
                     pygame.draw.line(self.canvas, colour, start, end, 2)

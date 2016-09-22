@@ -154,32 +154,37 @@ class Character(pygame.sprite.Sprite):
 
     @classmethod
     def from_genome(cls, world, genome):
-        genedata = genome.data
-        self = cls(world, int(genedata[0]))
-        num_hidden_neurons = int(genedata[1])
+        self = cls(world, genome.radius)
+        num_hidden_neurons = genome.hidden_neurons
         input_weights = []
         output_weights = []
         pos = 2
+        num_hidden0_weights = genome._inputs
+        hidden0_weights_iter = iter(genome.hidden0_weights)
         for i in range(num_hidden_neurons):
-            row = []
-            for j in range(cls.brain_inputs):
-                data = genome.data[pos:pos + 1]
-                value = 0
-                if len(data) == 1:
-                    value = data[0]
-                row.append(value)
-                pos += 1
-            input_weights.append(row)
-        for i in range(cls.brain_outputs):
-            row = []
+            neuron_inputs = []
+            for j in range(num_hidden0_weights):
+                neuron_inputs.append(hidden0_weights_iter.next())
+            input_weights.append(neuron_inputs)
+        try:
+            hidden0_weights_iter.next()
+        except StopIteration:
+            pass
+        else:
+            assert 0
+        num_output_weights = genome._outputs
+        output_weights_iter = iter(genome.output_weights)
+        for i in range(num_output_weights):
+            neuron_outputs = []
             for j in range(num_hidden_neurons):
-                data = genome.data[pos:pos + 1]
-                value = 0
-                if len(data) == 1:
-                    value = data[0]
-                row.append(value)
-                pos += 1
-            output_weights.append(row)
+                neuron_outputs.append(output_weights_iter.next())
+            output_weights.append(neuron_outputs)
+        try:
+            output_weights_iter.next()
+        except StopIteration:
+            pass
+        else:
+            assert 0
 
         self.brain = Brain(input_weights, output_weights)
         self._genome = genome
