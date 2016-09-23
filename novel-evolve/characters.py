@@ -113,7 +113,7 @@ if use_numpy:
     Brain = NumpyBrain
 
 class Character(pygame.sprite.Sprite):
-    brain_inputs = 5
+    brain_inputs = 4
     brain_outputs = 4
     def __init__(self, world, radius):
         super(Character, self).__init__()
@@ -190,20 +190,22 @@ class Character(pygame.sprite.Sprite):
         self.brain = Brain(input_weights, output_weights)
         self._genome = genome
         return self
-
-    @property
-    def colour(self):
-        pass
-
-    @colour.setter
-    def colour(self, color):
-       self.image.fill(color)
     
+    def _draw_border(self, colour):
+        pygame.draw.lines(self.image, colour, 1, [
+            (0, 0), (self.rect.w - 1, 0), (self.rect.w - 1, self.rect.h - 1), (0, self.rect.h - 1)
+        ], 3)
+
     def draw(self):
         self.rect.x = self._x
         self.rect.y = self._y
+        
+        if self.world.active_item is not self:
+            self._draw_border((0, 0, 0, 0))
+
         r_r = (self.r + 2, self.r + 2)
         liveness = int(min(1.0, self._energy / 2000 + 0.5) * 255)
+        pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r + 2, 0)
         pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
         eye_pos = list(r_r)
         eye_pos[0] += int((self.r - 5) * math.sin(self._angle))
@@ -211,12 +213,7 @@ class Character(pygame.sprite.Sprite):
         pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
 
         if self.world.active_item is self:
-            border = (0, 0, 255, 255)
-        else:
-            border = (0, 0, 0, 0)
-        pygame.draw.lines(self.image, border, 1, [
-            (0, 0), (self.rect.w - 1, 0), (self.rect.w - 1, self.rect.h - 1), (0, self.rect.h - 1)
-        ], 3)
+            self._draw_border((0, 0, 255, 255))
 
     def die(self):
         self.world.allcharacters.remove(self)
@@ -227,18 +224,6 @@ class Character(pygame.sprite.Sprite):
         world = self.world
 
         # observing world
-        if self._x < 0 or self._y < 0 \
-        or self._x > world.canvas_w or self._y > world.canvas_h:
-            self.die()
-            return
-        else:
-            current_walls = [
-                t for t in world.allwalls
-                if t.rect.collidepoint(self._x + self.r, self.y + self.r)]
-            if current_walls:
-                # oops, off the map
-                self.die()
-                return
         current_tile = world.alltiles_coords[self._x // world.tile_w, self._y // world.tile_h]
 
         # energy and age:
@@ -254,7 +239,6 @@ class Character(pygame.sprite.Sprite):
             self._angle,
             self._speed,
             self._energy / 1000,
-            current_tile.nutrition,
         )
         outputs = self.brain.process(*inputs)
         (
@@ -265,12 +249,12 @@ class Character(pygame.sprite.Sprite):
         ) = outputs
 
         # eating:
-        if self._eat > 0:
-            eating_rate = 100 # J/s
-            amount_to_eat = eating_rate * dt
-            if current_tile.nutrition > amount_to_eat:
-                self._energy += amount_to_eat
-                current_tile.nutrition -= amount_to_eat
+        #if self._eat > 0:
+        #    eating_rate = 100 # J/s
+        #    amount_to_eat = eating_rate * dt
+        #    if current_tile.nutrition > amount_to_eat:
+        #        self._energy += amount_to_eat
+        #        current_tile.nutrition -= amount_to_eat
         
         # reproducing:
         if self._spawn > 0:
@@ -300,7 +284,6 @@ class Character(pygame.sprite.Sprite):
         self.x = min(max(0, x), self.world.canvas_w - self.r)
         self.y = min(max(0, y), self.world.canvas_h - self.r)
         collided = pygame.sprite.spritecollide(self, world.allcharacters, 0)
-        collided += pygame.sprite.spritecollide(self, world.allwalls, 0)
         for item in collided:
             if item is not self:
                 self.x = prev_x
