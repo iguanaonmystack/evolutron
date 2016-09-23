@@ -133,9 +133,10 @@ class Character(pygame.sprite.Sprite):
         self._speed = 0.0 # m/s
         self._acceleration = 0.0 # m/s^2
 
-        self._energy = 500 # J
+        self._energy = 300 # J
         self._energy_burn_rate = 50 # J/s
         self._age = 0.0 # s
+        self.gen = 0
         self._eat = 0.0 # > 0 means eat
         self._spawn = 0.0 # > 0 means try to reproduce
 
@@ -219,6 +220,8 @@ class Character(pygame.sprite.Sprite):
 
     def die(self):
         self.world.allcharacters.remove(self)
+        if self.world.active_item is self:
+            self.world.active_item = None
 
     def update(self, dt):
         world = self.world
@@ -279,6 +282,7 @@ class Character(pygame.sprite.Sprite):
                 newchar.x = self._x
                 newchar.y = self._y
                 newchar.bred = 1
+                newchar.gen = self.gen + 1
                 op = operator.sub
                 while pygame.sprite.spritecollideany(newchar, world.allcharacters):
                     newchar.x = op(newchar.x, 1)
@@ -326,8 +330,9 @@ class Character(pygame.sprite.Sprite):
             "Character:",
             "created at: %.2fs" % self._created,
             "age: %.2fs" % self._age,
-            "eat: %.2fs" % self._eat,
-            "spawn: %.2fs" % self._spawn,
+            "generation: %d" % self.gen,
+            "eat: %.2f" % self._eat,
+            "spawn: %.2f" % self._spawn,
             "energy: %.2fJ" % self._energy,
             "r: %dm" % self.r,
             "angle: %.2f radians" % self._angle,
