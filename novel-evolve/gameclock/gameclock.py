@@ -123,7 +123,7 @@ other Python-based multi-media and game development libraries.
 
 
 import time
-
+from functools import reduce
 
 class _IntervalItem(object):
     """An interval item runs after an elapsed interval."""

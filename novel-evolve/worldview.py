@@ -10,9 +10,9 @@ import group
 
 MIN_CHARACTERS = 100
 
-class World(viewport.Viewport):
+class WorldView(viewport.Viewport):
     def __init__(self, parent, viewport_rect, canvas_w, canvas_h):
-        super(World, self).__init__(parent, viewport_rect, canvas_w, canvas_h)
+        super(WorldView, self).__init__(parent, viewport_rect, canvas_w, canvas_h)
 
         self.tile_w = 100
         self.tile_h = 100
