@@ -29,18 +29,18 @@ class Window(object):
         self.brainview = brainview.BrainView(self, Rect(0, 300, 200, 400))
         self.allsprites.add(self.brainview)
 
-        popview_ = popview.GenePopView(self, Rect(0, 700, 200, 100))
-        self.allsprites.add(popview_)
-        popview_ = popview.TimePopView(self, Rect(0, 800, 200, 100))
-        self.allsprites.add(popview_)
-        popview_ = popview.AgePopView(self, Rect(0, 900, 200, 100))
-        self.allsprites.add(popview_)
+        self.genesview = popview.GenePopView(self, Rect(0, 700, 200, 200))
+        self.allsprites.add(self.genesview)
+        self.popview = popview.TimePopView(self, Rect(0, 900, 200, 100))
+        self.allsprites.add(self.popview)
 
     def onresize(self, window_w, window_h):
         self.background = pygame.Surface(self.screen.get_size()).convert()
         if hasattr(self, 'world'):
             self.world.resize(Rect(200, 0, window_w - 200, window_h))
-            self.brainview.resize(Rect(0, 500, 200, window_h - 500))
+            self.brainview.resize(Rect(0, 300, 200, window_h - 600))
+            self.genesview.resize(Rect(0, window_h - 300, 200, 200))
+            self.popview.resize(Rect(0, window_h - 100, 200, 100))
 
     def update(self, dt):
         self.world.update(dt)

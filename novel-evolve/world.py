@@ -58,6 +58,20 @@ class World(viewport.Viewport):
         for group in (self.alltiles, self.allwalls, self.allcharacters):
             group.update(dt)
 
+    def jump_to(self, item):
+        x = item.rect.x - self.rect.w // 2
+        y = item.rect.y - self.rect.h // 2
+        if x < 0:
+            x = 0
+        if y < 0:
+            y = 0
+        if x > self.canvas_w - self.rect.w:
+            x = self.canvas_w - self.rect.w
+        if y > self.canvas_h - self.rect.h:
+            y = self.canvas_h - self.rect.h
+        self.drag_offset[0] = -x
+        self.drag_offset[1] = -y
+
     def draw(self):
         for group in (self.alltiles, self.allwalls, self.allcharacters):
             group.draw(self.canvas)

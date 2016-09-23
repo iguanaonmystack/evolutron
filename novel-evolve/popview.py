@@ -1,4 +1,5 @@
 import operator
+import collections
 
 import pygame
 from pygame.locals import *
@@ -10,7 +11,7 @@ class GenePopView(viewport.Viewport):
 
     def __init__(self, parent, viewport_rect):
         super(GenePopView, self).__init__(
-            parent, viewport_rect, viewport_rect.w, 100)
+            parent, viewport_rect, viewport_rect.w, 200)
         self.font = pygame.font.Font(None, 18)
         self.xwidth = 2
         self.ywidth = 2
@@ -67,70 +68,60 @@ class GenePopView(viewport.Viewport):
                         start, end, ywidth)
 
             off += ywidth
-            if off > 100:
+            if off > 200:
                 break
 
         self.image.blit(self.canvas, self.drag_offset)
 
     def onclick(self, relpos, button):
-        print relpos[1], self.ywidth,
         sorted_chars_idx = relpos[1] // self.ywidth
-        print sorted_chars_idx
         if sorted_chars_idx < len(self.sorted_chars):
-            self.parent.world.active_item = self.sorted_chars[sorted_chars_idx]
+            char = self.sorted_chars[sorted_chars_idx]
+            self.parent.world.active_item = char
+            self.parent.brainview.brain = char.brain
+            self.parent.world.jump_to(char)
 
 class TimePopView(viewport.Viewport):
 
     def __init__(self, parent, viewport_rect):
         super(TimePopView, self).__init__(
-            parent, viewport_rect, viewport_rect.w, 100)
-        self._text = ''
-        self._text_changed = True
+            parent, viewport_rect, viewport_rect.w, viewport_rect.h)
         self.font = pygame.font.Font(None, 18)
-    
+        self.h = viewport_rect.h
+        self.pop_plots = collections.deque()
+        self.avgage_plots = collections.deque()
+        self.avggen_plots = collections.deque()
+        self.plot_every = 5
+        self.plot_count = 0
+
     def draw(self):
-        if self._text_changed:
-            self.canvas.fill((255, 255, 255))
-            s = str(self._text)
-            off = 0
-            for line in s.split('\n'):
-                text = self.font.render(line, True, (0, 0, 0))
+        if self.plot_count == 0:
+            self.canvas.fill((0, 0, 0))
+            pop = len(self.parent.world.allcharacters)
+            avgage = sum(c._age for c in self.parent.world.allcharacters) / float(pop)
+            avggen = sum(c.gen for c in self.parent.world.allcharacters) / float(pop)
+            label_xoff = 0
+            for label, plots, latest, colour in (
+                ('Pop', self.pop_plots, pop, (255, 255, 0)),
+                ('AvgAge', self.avgage_plots, avgage, (0, 255, 0)),
+                ('AvgGen', self.avggen_plots, avggen, (0, 255, 255))):
+                plots.append(latest)
+                if len(plots) > 100:
+                    plots.popleft()
+                width = 2
+                max_ = max(plots) or 1
+                for i, plot in enumerate(plots):
+                    x = width * i
+                    y = self.h - float(plot) / max_ * (self.h - 20)
+                    start = (x, y)
+                    end = (x, y + 2)
+                    pygame.draw.line(self.canvas, colour, start, end, width)
+                text = self.font.render('%s: %d'%(label, latest), False, colour)
                 rect = text.get_rect()
-                self.canvas.blit(text, (0, 0 + off))
-                off += rect.h
+                self.canvas.blit(text, (label_xoff, 0))
+                label_xoff += rect.w + 3
             self.image.blit(self.canvas, self.drag_offset)
-            self._text_changed = False
-
-    @property
-    def text(self):
-        raise NotImplementedError()
-    @text.setter
-    def text(self, value):
-        if value != self._text:
-            self._text_changed = True
-        self._text = value
-
-class AgePopView(viewport.Viewport):
-
-    def __init__(self, parent, viewport_rect):
-        super(AgePopView, self).__init__(
-            parent, viewport_rect, viewport_rect.w, 100)
-        self._text = ''
-        self._text_changed = True
-        self.font = pygame.font.Font(None, 18)
-    
-    def draw(self):
-        if self._text_changed:
-            self.canvas.fill((255, 255, 255))
-            s = str(self._text)
-            off = 0
-            for line in s.split('\n'):
-                text = self.font.render(line, True, (0, 0, 0))
-                rect = text.get_rect()
-                self.canvas.blit(text, (0, 0 + off))
-                off += rect.h
-            self.image.blit(self.canvas, self.drag_offset)
-            self._text_changed = False
+        self.plot_count = (self.plot_count + 1) % self.plot_every
 
     @property
     def text(self):
