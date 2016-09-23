@@ -165,10 +165,10 @@ class Character(pygame.sprite.Sprite):
         for i in range(num_hidden_neurons):
             neuron_inputs = []
             for j in range(num_hidden0_weights):
-                neuron_inputs.append(hidden0_weights_iter.next())
+                neuron_inputs.append(next(hidden0_weights_iter))
             input_weights.append(neuron_inputs)
         try:
-            hidden0_weights_iter.next()
+            next(hidden0_weights_iter)
         except StopIteration:
             pass
         else:
@@ -178,10 +178,10 @@ class Character(pygame.sprite.Sprite):
         for i in range(num_output_weights):
             neuron_outputs = []
             for j in range(num_hidden_neurons):
-                neuron_outputs.append(output_weights_iter.next())
+                neuron_outputs.append(next(output_weights_iter))
             output_weights.append(neuron_outputs)
         try:
-            output_weights_iter.next()
+            next(output_weights_iter)
         except StopIteration:
             pass
         else:

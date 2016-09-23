@@ -75,7 +75,7 @@ class Genome(object):
 if __name__ == '__main__':
     random.seed(1)
     g = Genome.from_random(1, 1)
-    print g
+    print(g)
     for i in range(10000):
         g = g.mutate(0.01)
-    print g
+    print(g)

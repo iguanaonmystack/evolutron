@@ -1,10 +1,9 @@
 
-
 import pygame
 from pygame.locals import *
 
 import group
-import world
+import worldview
 import infopane
 import brainview
 import popview
@@ -19,7 +18,7 @@ class Window(object):
 
         self.allsprites = group.Group()
 
-        self.world = world.World(
+        self.world = worldview.WorldView(
             self, Rect(200, 0, 1000 - 200, 1000), world_w, world_h)
         self.allsprites.add(self.world)
 
