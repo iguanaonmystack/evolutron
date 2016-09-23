@@ -3,6 +3,8 @@ import random
 import pygame
 from pygame.locals import *
 
+from novel.world import World
+
 import viewport
 import tiles
 import characters
@@ -13,28 +15,23 @@ MIN_CHARACTERS = 100
 class WorldView(viewport.Viewport):
     def __init__(self, parent, viewport_rect, canvas_w, canvas_h):
         super(WorldView, self).__init__(parent, viewport_rect, canvas_w, canvas_h)
+        
 
-        self.tile_w = 100
-        self.tile_h = 100
+        self.tile_w = 50
+        self.tile_h = 50
+        self.world = World.from_random(canvas_w//self.tile_w, canvas_h//self.tile_h)
+
         self.alltiles = group.Group()
         self.alltiles_coords = {}
-        for i in range(self.canvas_w // self.tile_w):
-            for j in range(self.canvas_h // self.tile_h):
-                block = tiles.Tile(self, i, j, self.tile_w, self.tile_h,
-                                   max_nutrition=random.randint(0, 255))
+        for i, row in enumerate(self.world):
+            for j, tile in enumerate(row):
+
+                block = tiles.TileView(
+                    self, i, j, self.tile_w, self.tile_h, tile,
+                    fertility=random.random())
                 self.alltiles.add(block)
                 self.alltiles_coords[i, j] = block
 
-        self.allwalls = group.Group()
-        self.allwalls.add(
-            tiles.Tile(self, 0, -1, self.canvas_w, 100))
-        self.allwalls.add(
-            tiles.Tile(self, self.canvas_w / 100, 0, 100, self.canvas_h))
-        self.allwalls.add(
-            tiles.Tile(self, 0, self.canvas_h / 100, self.canvas_w, 100))
-        self.allwalls.add(
-            tiles.Tile(self, -1, 0, 100, self.canvas_h))
-        
         self.allcharacters = group.Group()
         self.active_item = None
         self.age = 0.0
@@ -55,7 +52,7 @@ class WorldView(viewport.Viewport):
         self.age += dt
         while len(self.allcharacters) < MIN_CHARACTERS:
             self._create_character()
-        for group in (self.alltiles, self.allwalls, self.allcharacters):
+        for group in (self.alltiles, self.allcharacters):
             group.update(dt)
 
     def jump_to(self, item):
@@ -73,7 +70,7 @@ class WorldView(viewport.Viewport):
         self.drag_offset[1] = -y
 
     def draw(self):
-        for group in (self.alltiles, self.allwalls, self.allcharacters):
+        for group in (self.alltiles, self.allcharacters):
             group.draw(self.canvas)
 
         if self.active_item:

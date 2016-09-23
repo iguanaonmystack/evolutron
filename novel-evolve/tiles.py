@@ -1,19 +1,38 @@
 import pygame
 from pygame.locals import *
 
-class Tile(pygame.sprite.Sprite):
-    def __init__(self, world, x, y, w, h, max_nutrition=255):
+from novel import terrains
+
+class TileView(pygame.sprite.Sprite):
+    def __init__(self, world, x, y, w, h, tile, fertility=1.0):
         pygame.sprite.Sprite.__init__(self)
         self.world = world
         self._x = x
         self._y = y
         self._w = w
         self._h = h
+        self.tile = tile
+        self.r_mult = 255
+        self.g_mult = 0
+        self.b_mult = 0
+        if isinstance(self.tile.terrain, terrains.Meadow):
+            self.r_mult = 120
+            self.g_mult = 180
+            self.b_mult = 120
+        elif isinstance(self.tile.terrain, terrains.Lake):
+            self.r_mult = 0
+            self.g_mult = 0
+            self.b_mult = 215
+        elif isinstance(self.tile.terrain, terrains.Forest):
+            self.r_mult = 0
+            self.g_mult = 215
+            self.b_mult = 0
+        else:
+            print('unknown terrain type: %r' % self.tile)
 
-        if max_nutrition > 255:
-            raise ValueError('max_nutrition must be <= 255')
-        self._nutrition = max_nutrition
-        self._max_nutrition = max_nutrition
+        if fertility > 1.0:
+            raise ValueError('fertility must be <= 1.0')
+        self.fertility = fertility
         
         self.image = pygame.Surface((self._w, self._h)).convert()
         self.image.fill((0,0,255))
@@ -24,20 +43,14 @@ class Tile(pygame.sprite.Sprite):
         self.rect.x = self._x * self._w
         self.rect.y = self._y * self._h
 
-    @property
-    def nutrition(self):
-        return self._nutrition
-    @nutrition.setter
-    def nutrition(self, value):
-        self._nutrition = value
-    
     def update(self, dt):
-        self._nutrition += 25 * dt
-        if self._nutrition > self._max_nutrition:
-            self._nutrition = self._max_nutrition
+        pass
         
     def draw(self):
-        new_fill = (int(self._nutrition), 0, 0)
+
+        new_fill = (int(self.fertility * self.r_mult + 40),
+                    int(self.fertility * self.g_mult + 40),
+                    int(self.fertility * self.b_mult + 40))
         if new_fill != self.last_fill:
             self.last_fill = new_fill
             self.image.fill(new_fill)
@@ -50,7 +63,7 @@ class Tile(pygame.sprite.Sprite):
     def __str__(self):
         return '\n'.join([
             'Tile:',
-            'nutrition: %s' % self._nutrition,
-            'max_nutrition: %s' % self._max_nutrition,
+            'terrain: %s' % self.tile.terrain.__class__.__name__,
+            'fertility: %s' % self.fertility,
         ])
 
