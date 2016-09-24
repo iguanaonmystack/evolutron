@@ -33,7 +33,7 @@ class Genome(object):
     def _mutate_single(self, value, rate):
         r = random.random()
         if r < rate:
-            value += random.random() * 2 - 1
+            value += random.random() - 0.5
         return value
 
     def mutate(self, rate=0.01):
@@ -43,11 +43,15 @@ class Genome(object):
         iterate_over = self.hidden_neurons
         if new.hidden_neurons < self.hidden_neurons:
             iterate_over = new.hidden_neurons
+        i = 0
         for i in range(iterate_over):
+            offset = self._inputs * i
             for j in range(self._inputs):
-                new.hidden0_weights.append(self._mutate_single(self.hidden0_weights[i], rate))
+                new.hidden0_weights.append(
+                    self._mutate_single(self.hidden0_weights[offset + j], rate))
             for j in range(self._outputs):
-                new.output_weights.append(self._mutate_single(self.output_weights[i], rate))
+                new.output_weights.append(
+                    self._mutate_single(self.output_weights[offset + j], rate))
         while i < new.hidden_neurons - 1:
             # the genome mutated to desire more hidden neurons
             # so add random numbers to increase the weight part of the genome
