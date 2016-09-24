@@ -45,9 +45,9 @@ class BrainView(viewport.Viewport):
             self.image.blit(self.canvas, self.drag_offset)
             return
 
-        input_labels = ('const', 'angle', 'speed', 'energy', 'tile_nut')
+        input_labels = ('const', 'haptic', 'energy/k')
         hidden_labels = ()
-        output_labels = ('angle ch', 'acc', 'eat', 'spawn')
+        output_labels = ('angle ch', 'acc', 'spawn')
 
         for i, layer in enumerate((input_labels, hidden_labels, output_labels)):
             for j, label in enumerate(layer):

@@ -26,7 +26,7 @@ class GenePopView(viewport.Viewport):
         xwidth = self.xwidth
         ywidth = self.ywidth
         for character in self.sorted_chars:
-            g = character._genome
+            g = character.genome
             s = selected = (self.parent.world.active_item is character) * 255
             xoff = 0
 
