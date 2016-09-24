@@ -154,11 +154,11 @@ class Character(pygame.sprite.Sprite):
         self._created = 0.0 # age of world
 
         self._angle = math.pi / 2.0 # radians clockwise from north
-        self._speed = 0.0 # m/s
+        self.speed = 0.0 # m/tick
 
-        self._energy = 300 # J
-        self._energy_burn_rate = 25 # J/s
-        self._age = 0.0 # s
+        self._energy = 2000 # J
+        self._energy_burn_rate = 10 # J/tick
+        self.age = 0 # ticks
         self.gen = 0
 
         self.brain = None
@@ -225,7 +225,7 @@ class Character(pygame.sprite.Sprite):
             self._draw_border((0, 0, 0, 0))
 
         r_r = (self.r + 2, self.r + 2)
-        liveness = int(min(1.0, self._energy / 500 + 0.5) * 255)
+        liveness = int(min(1.0, self._energy / 2000 + 0.5) * 255)
         pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r + 2, 0)
         pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
         eye_pos = list(r_r)
@@ -256,7 +256,7 @@ class Character(pygame.sprite.Sprite):
                     pass
 
         # energy and age:
-        self._age += 1
+        self.age += 1
         self._energy -= self._energy_burn_rate
         if self._energy <= 0:
             self.die()
@@ -271,21 +271,24 @@ class Character(pygame.sprite.Sprite):
         outputs = self.brain.process(*inputs)
         (
             angle_change,
-            acceleration,
+            Fmove,
             spawn,
         ) = outputs
+        # compensate values from NN
+        Fmove *= 3
+        angle_change /= 2
 
         # eating:
         foods = []
         for tile in check_tiles:
             foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
         for food in foods:
-            self._energy += 25
+            self._energy += food.energy
             food.eaten()
 
         # reproducing:
-        if spawn and self._energy > 350 and self._age > 3:
-            self._energy -= 300
+        if spawn and self._energy > 3000:
+            self._energy -= 3000
             newgenome = self.genome.mutate()
             newchar = self.__class__.from_genome(world, newgenome)
             newchar.x = self._x
@@ -299,20 +302,24 @@ class Character(pygame.sprite.Sprite):
             world.allcharacters.add(newchar)
 
         # movement:
+        Ffriction = self.speed / 4
+        acceleration = (Fmove - Ffriction) / (self.r)
         prev_x, prev_y = self._x, self._y
-        self._speed += acceleration
-        ddist = self._speed
+        self.speed += acceleration
+        ddist = self.speed
         self._angle = (self._angle + angle_change) % (2 * math.pi)
         x = self._x + ddist * math.sin(self._angle)
         y = self._y - ddist * math.cos(self._angle)
         self.x = min(max(0, x), self.world.canvas_w - self.r)
         self.y = min(max(0, y), self.world.canvas_h - self.r)
         collided = pygame.sprite.spritecollide(self, world.allcharacters, 0)
-        collided += pygame.sprite.spritecollide(self, world.alltrees, 0)
+        for tile in check_tiles:
+            collided.extend(pygame.sprite.spritecollide(self, tile.alltrees, 0))
         for item in collided:
             if item is not self:
                 self.x = prev_x
                 self.y = prev_y
+                self.speed = 0
                 self.haptic = 1
                 break
         else:
@@ -340,12 +347,12 @@ class Character(pygame.sprite.Sprite):
         return '\n'.join([
             "Character:",
             "created at: %.2ft" % self._created,
-            "age: %.2ft" % self._age,
+            "age: %dt" % self.age,
             "generation: %d" % self.gen,
             "energy: %.2fJ" % self._energy,
             "r: %dm" % self.r,
             "angle: %.2f radians" % self._angle,
-            "speed: %.2fm/t" % self._speed,
+            "speed: %.2fm/t" % self.speed,
             "x: %dm E" % self._x,
             "y: %dm S" % self._y,
         ])
@@ -357,10 +364,10 @@ class Character(pygame.sprite.Sprite):
             'y': self.y,
             'created': self._created,
             'angle': self._angle,
-            'speed': self._speed,
+            'speed': self.speed,
             'energy': self._energy,
             'energy_burn_rate': self._energy_burn_rate,
-            'age': self._age,
+            'age': self.age,
             'gen': self.gen,
             'brain': self.brain.dump(),
             'genome': self.genome.dump(),

@@ -98,7 +98,7 @@ class TimePopView(viewport.Viewport):
         if self.plot_count == 0:
             self.canvas.fill((0, 0, 0))
             pop = len(self.parent.world.allcharacters)
-            avgage = sum(c._age for c in self.parent.world.allcharacters) / float(pop or 1)
+            avgage = sum(c.age for c in self.parent.world.allcharacters) / float(pop or 1)
             avggen = sum(c.gen for c in self.parent.world.allcharacters) / float(pop or 1)
             label_xoff = 0
             for label, plots, latest, colour in (
