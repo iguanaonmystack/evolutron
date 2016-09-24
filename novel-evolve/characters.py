@@ -223,7 +223,15 @@ class Character(pygame.sprite.Sprite):
         world = self.world
 
         # observing world
-        current_tile = world.alltiles_coords[self._x // world.tile_w, self._y // world.tile_h]
+        tile_coord = self._x // world.tile_w, self._y // world.tile_h 
+        check_tiles = []
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                coord = tile_coord[0] + i, tile_coord[1] + j
+                try:
+                    check_tiles.append(world.alltiles_coords[coord])
+                except KeyError:
+                    pass
 
         # energy and age:
         self._age += dt
@@ -247,7 +255,9 @@ class Character(pygame.sprite.Sprite):
         ) = outputs
 
         # eating:
-        foods = pygame.sprite.spritecollide(self, world.allfood, 0)
+        foods = []
+        for tile in check_tiles:
+            foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
         for food in foods:
             self._energy += 25
             food.eaten()
