@@ -114,7 +114,7 @@ if use_numpy:
 
 class Character(pygame.sprite.Sprite):
     brain_inputs = 4
-    brain_outputs = 4
+    brain_outputs = 3
     def __init__(self, world, radius):
         super(Character, self).__init__()
 
@@ -134,10 +134,9 @@ class Character(pygame.sprite.Sprite):
         self._acceleration = 0.0 # m/s^2
 
         self._energy = 300 # J
-        self._energy_burn_rate = 50 # J/s
+        self._energy_burn_rate = 25 # J/s
         self._age = 0.0 # s
         self.gen = 0
-        self._eat = 0.0 # > 0 means eat
         self._spawn = 0.0 # > 0 means try to reproduce
 
         self.brain = None
@@ -190,7 +189,7 @@ class Character(pygame.sprite.Sprite):
         self.brain = Brain(input_weights, output_weights)
         self._genome = genome
         return self
-    
+
     def _draw_border(self, colour):
         pygame.draw.lines(self.image, colour, 1, [
             (0, 0), (self.rect.w - 1, 0), (self.rect.w - 1, self.rect.h - 1), (0, self.rect.h - 1)
@@ -199,12 +198,12 @@ class Character(pygame.sprite.Sprite):
     def draw(self):
         self.rect.x = self._x
         self.rect.y = self._y
-        
+
         if self.world.active_item is not self:
             self._draw_border((0, 0, 0, 0))
 
         r_r = (self.r + 2, self.r + 2)
-        liveness = int(min(1.0, self._energy / 2000 + 0.5) * 255)
+        liveness = int(min(1.0, self._energy / 500 + 0.5) * 255)
         pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r + 2, 0)
         pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
         eye_pos = list(r_r)
@@ -244,35 +243,30 @@ class Character(pygame.sprite.Sprite):
         (
             self._angle_change,
             self._acceleration,
-            self._eat,
             self._spawn,
         ) = outputs
 
         # eating:
-        #if self._eat > 0:
-        #    eating_rate = 100 # J/s
-        #    amount_to_eat = eating_rate * dt
-        #    if current_tile.nutrition > amount_to_eat:
-        #        self._energy += amount_to_eat
-        #        current_tile.nutrition -= amount_to_eat
-        
+        foods = pygame.sprite.spritecollide(self, world.allfood, 0)
+        for food in foods:
+            self._energy += 25
+            food.eaten()
+
         # reproducing:
-        if self._spawn > 0:
-            if self._energy > 500 and self._age > 5:
-                # the age limit is needed to stop a spawning loop
-                self._energy -= 500
-                newgenome = self._genome.mutate()
-                newchar = self.__class__.from_genome(world, newgenome)
-                newchar.x = self._x
-                newchar.y = self._y
-                newchar.bred = 1
-                newchar.gen = self.gen + 1
-                op = operator.sub
-                while pygame.sprite.spritecollideany(newchar, world.allcharacters):
-                    newchar.x = op(newchar.x, 1)
-                    if newchar.x < 1:
-                        op = operator.add
-                world.allcharacters.add(newchar)
+        if self._spawn and self._energy > 350 and self._age > 3:
+            self._energy -= 300
+            newgenome = self._genome.mutate()
+            newchar = self.__class__.from_genome(world, newgenome)
+            newchar.x = self._x
+            newchar.y = self._y
+            newchar.bred = 1
+            newchar.gen = self.gen + 1
+            op = operator.sub
+            while pygame.sprite.spritecollideany(newchar, world.allcharacters):
+                newchar.x = op(newchar.x, 1)
+                if newchar.x < 1:
+                    op = operator.add
+            world.allcharacters.add(newchar)
 
         # movement:
         prev_x, prev_y = self._x, self._y
@@ -284,12 +278,13 @@ class Character(pygame.sprite.Sprite):
         self.x = min(max(0, x), self.world.canvas_w - self.r)
         self.y = min(max(0, y), self.world.canvas_h - self.r)
         collided = pygame.sprite.spritecollide(self, world.allcharacters, 0)
+        collided += pygame.sprite.spritecollide(self, world.alltrees, 0)
         for item in collided:
             if item is not self:
                 self.x = prev_x
                 self.y = prev_y
                 self._speed = 0
-    
+
     @property
     def x(self):
         return self._x
@@ -297,12 +292,12 @@ class Character(pygame.sprite.Sprite):
     @x.setter
     def x(self, value):
         self._x = value
-        self.rect.x = value    
+        self.rect.x = value
 
     @property
     def y(self):
         return self._y
-    
+
     @y.setter
     def y(self, value):
         self._y = value
@@ -314,7 +309,6 @@ class Character(pygame.sprite.Sprite):
             "created at: %.2fs" % self._created,
             "age: %.2fs" % self._age,
             "generation: %d" % self.gen,
-            "eat: %.2f" % self._eat,
             "spawn: %.2f" % self._spawn,
             "energy: %.2fJ" % self._energy,
             "r: %dm" % self.r,
