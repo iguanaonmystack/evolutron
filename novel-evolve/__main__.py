@@ -19,6 +19,9 @@ def main():
     parser.add_argument(
         '--screenshot', dest='screenshot', action='store', default=False,
         help='Take a screenshot and exit')
+    parser.add_argument(
+        '--profile', dest='profile', action='store_true', default=False,
+        help='Run headless for 1000 ticks to get profile data')
     args = parser.parse_args()
 
     if args.screenshot:
@@ -31,13 +34,20 @@ def main():
     mousedown_pos = None
     mouse_was_dragged = False
 
-    if args.screenshot:
+    if args.screenshot or args.profile:
         os.putenv('SDL_VIDEODRIVER', 'fbcon')
         pygame.display.init()
+
+    if args.screenshot:
         for i in range(10):
             window.update()
         window.frame()
         pygame.image.save(window.screen, args.screenshot)
+        return
+    
+    if args.profile:
+        for i in range(100):
+            window.update()
         return
 
     tickrate = 1/60.  # target maximum
