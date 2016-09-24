@@ -346,7 +346,7 @@ class Character(pygame.sprite.Sprite):
     def __str__(self):
         return '\n'.join([
             "Character:",
-            "created at: %.2ft" % self._created,
+            "created at: %dt" % self._created,
             "age: %dt" % self.age,
             "generation: %d" % self.gen,
             "energy: %.2fJ" % self._energy,
