@@ -38,12 +38,6 @@ class WorldView(viewport.Viewport):
                 self.alltiles.add(block)
                 self.alltiles_coords[i, j] = block
 
-                if isinstance(tile.terrain, terrains.Forest):
-                    self.alltrees.add(tree.Tree(
-                        random.randint(4, 20), # radius
-                        random.randint(0, self.tile_w) + self.tile_w * i, # x
-                        random.randint(0, self.tile_h) + self.tile_h * j)) # y
-
         self.allcharacters = group.Group()
         self.active_item = None
         self.age = 0.0

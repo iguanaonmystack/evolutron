@@ -7,6 +7,7 @@ from novel import terrains
 
 import group
 import food
+import tree
 
 class TileView(pygame.sprite.Sprite):
     def __init__(self, world, x, y, w, h, tile, fertility=1.0):
@@ -22,7 +23,7 @@ class TileView(pygame.sprite.Sprite):
         self.g_mult = 0
         self.b_mult = 0
         if isinstance(self.tile.terrain, terrains.Meadow):
-            self.fertility_mult = 0.001
+            self.fertility_mult = 0.005
             self.r_mult = 120
             self.g_mult = 180
             self.b_mult = 120
@@ -32,7 +33,7 @@ class TileView(pygame.sprite.Sprite):
             self.g_mult = 0
             self.b_mult = 215
         elif isinstance(self.tile.terrain, terrains.Forest):
-            self.fertility_mult = 0.002
+            self.fertility_mult = 0.010
             self.r_mult = 0
             self.g_mult = 215
             self.b_mult = 0
@@ -52,8 +53,19 @@ class TileView(pygame.sprite.Sprite):
         self.rect.x = self.x * self.w
         self.rect.y = self.y * self.h
 
+        self.alltrees = group.Group()
         self.allfood = group.Group()
         self.max_food = 10
+
+        if isinstance(tile.terrain, terrains.Forest):
+            t = tree.Tree(
+                self,
+                random.randint(4, 18), # radius
+                random.randint(0, w), # x
+                random.randint(0, h)) # y
+            self.alltrees.add(t)
+            world.alltrees.add(t)
+
 
     def update(self):
         # create some food
