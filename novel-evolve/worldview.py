@@ -61,12 +61,12 @@ class WorldView(viewport.Viewport):
             self.active_item = character
             self.parent.brainview.brain = character.brain
 
-    def update(self, dt):
-        self.age += dt
+    def update(self):
+        self.age += 1
         while len(self.allcharacters) < MIN_CHARACTERS:
             self._create_character()
         for group in (self.alltiles, self.allcharacters):
-            group.update(dt)
+            group.update()
 
     def jump_to(self, item):
         x = item.rect.x - self.rect.w // 2

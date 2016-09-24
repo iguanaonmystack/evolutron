@@ -22,7 +22,7 @@ class TileView(pygame.sprite.Sprite):
         self.g_mult = 0
         self.b_mult = 0
         if isinstance(self.tile.terrain, terrains.Meadow):
-            self.fertility_mult = 0.05
+            self.fertility_mult = 0.001
             self.r_mult = 120
             self.g_mult = 180
             self.b_mult = 120
@@ -32,7 +32,7 @@ class TileView(pygame.sprite.Sprite):
             self.g_mult = 0
             self.b_mult = 215
         elif isinstance(self.tile.terrain, terrains.Forest):
-            self.fertility_mult = 0.1
+            self.fertility_mult = 0.002
             self.r_mult = 0
             self.g_mult = 215
             self.b_mult = 0
@@ -55,10 +55,10 @@ class TileView(pygame.sprite.Sprite):
         self.allfood = group.Group()
         self.max_food = 10
 
-    def update(self, dt):
+    def update(self):
         # create some food
         if len(self.allfood) < self.max_food:
-            if random.random() < (self.fertility * self.fertility_mult * dt):
+            if random.random() < (self.fertility * self.fertility_mult):
                 f = food.Food(
                     self, random.randint(0, self.w), random.randint(0, self.h))
                 self.allfood.add(f)
