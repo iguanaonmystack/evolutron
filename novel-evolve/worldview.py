@@ -4,18 +4,19 @@ import pygame
 from pygame.locals import *
 
 from novel.world import World
+from novel import terrains
 
 import viewport
 import tiles
 import characters
 import group
+import tree
 
 MIN_CHARACTERS = 100
 
 class WorldView(viewport.Viewport):
     def __init__(self, parent, viewport_rect, canvas_w, canvas_h):
         super(WorldView, self).__init__(parent, viewport_rect, canvas_w, canvas_h)
-        
 
         self.tile_w = 50
         self.tile_h = 50
@@ -23,6 +24,11 @@ class WorldView(viewport.Viewport):
 
         self.alltiles = group.Group()
         self.alltiles_coords = {}
+
+        self.alltrees = group.Group()
+        self.allfood = group.Group()
+
+        # Generate tiles and trees
         for i, row in enumerate(self.world):
             for j, tile in enumerate(row):
 
@@ -32,6 +38,12 @@ class WorldView(viewport.Viewport):
                 self.alltiles.add(block)
                 self.alltiles_coords[i, j] = block
 
+                if isinstance(tile.terrain, terrains.Forest):
+                    self.alltrees.add(tree.Tree(
+                        random.randint(4, 20), # radius
+                        random.randint(0, self.tile_w) + self.tile_w * i, # x
+                        random.randint(0, self.tile_h) + self.tile_h * j)) # y
+
         self.allcharacters = group.Group()
         self.active_item = None
         self.age = 0.0
@@ -39,7 +51,8 @@ class WorldView(viewport.Viewport):
     def _create_character(self):
         character = characters.Character.from_random(self)
         while character._x is None \
-        or pygame.sprite.spritecollideany(character, self.allcharacters):
+        or pygame.sprite.spritecollideany(character, self.allcharacters) \
+        or pygame.sprite.spritecollideany(character, self.alltrees):
             character.x = random.randint(0, self.canvas_w - character.r * 2)
             character.y = random.randint(0, self.canvas_h - character.r * 2)
         self.allcharacters.add(character)
@@ -70,7 +83,7 @@ class WorldView(viewport.Viewport):
         self.drag_offset[1] = -y
 
     def draw(self):
-        for group in (self.alltiles, self.allcharacters):
+        for group in (self.alltiles, self.allfood, self.allcharacters, self.alltrees):
             group.draw(self.canvas)
 
         if self.active_item:
@@ -92,13 +105,20 @@ class WorldView(viewport.Viewport):
                                    if s.rect.collidepoint(canvas_pos)]
 
             if clicked_sprites:
+                if self.active_item is not None \
+                and self.active_item is not clicked_sprites[0]:
+                    self.active_item.redraw = True
                 self.active_item = clicked_sprites[0]
+                self.active_item.redraw = True
                 if hasattr(self.active_item, '_genome'):
                     self.parent.brainview.brain = self.active_item.brain
                 else:
                     self.parent.brainview.brain = None
                 return
-            
+
         self.parent.brainview.brain = None
-        self.active_item = None
- 
+        if self.active_item:
+            self.active_item.redraw = True
+            self.active_item = None
+
+
