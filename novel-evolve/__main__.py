@@ -1,6 +1,9 @@
 import os
 import sys
+import time
+import json
 import argparse
+
 import random
 random.seed(100)
 
@@ -56,16 +59,21 @@ def main():
             elif event.type == KEYDOWN:
                 if event.key == K_ESCAPE or event.key == K_q:
                     return
-                if event.key == K_ESCAPE or event.key == K_p:
+                elif event.key == K_p:
                     if clock.update_callback is None:
                         clock.update_callback = window.update
                     else:
                         clock.update_callback = None
-                if event.key == K_ESCAPE or event.key == K_r:
+                elif event.key == K_r:
                     if clock.frame_callback is None:
                         clock.frame_callback = window.frame
                     else:
                         clock.frame_callback = None
+                elif event.key == K_d:
+                    if window.world.active_item:
+                        with open('active-%s.json'%int(time.time()), 'w') as f:
+                            json.dump(window.world.active_item.dump(), f,
+                                sort_keys=True, indent=4)
             elif event.type==VIDEORESIZE:
                 screen = pygame.display.set_mode(event.dict['size'], RESIZABLE)
                 window.screen = screen

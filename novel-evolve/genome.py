@@ -18,7 +18,7 @@ class Genome(object):
         self = cls(inputs, outputs)
         self.radius = random.randint(5, 20)
         self.hidden_neurons = random.randint(2, 8)
-        
+
         # For each hidden neuron, generate the weight for each input and for
         # each output
         for i in range(self.hidden_neurons):
@@ -69,7 +69,14 @@ class Genome(object):
             self.hidden0_weights,
             self.output_weights,
         )])
-
+    
+    def dump(self):
+        return {
+            'radius': self.radius,
+            'hidden_neurons': self.hidden_neurons,
+            'hidden0_weights': self.hidden0_weights,
+            'output_weights': self.output_weights,
+        }
 
 
 if __name__ == '__main__':

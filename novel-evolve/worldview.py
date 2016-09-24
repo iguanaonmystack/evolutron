@@ -110,7 +110,7 @@ class WorldView(viewport.Viewport):
                     self.active_item.redraw = True
                 self.active_item = clicked_sprites[0]
                 self.active_item.redraw = True
-                if hasattr(self.active_item, '_genome'):
+                if hasattr(self.active_item, 'brain'):
                     self.parent.brainview.brain = self.active_item.brain
                 else:
                     self.parent.brainview.brain = None

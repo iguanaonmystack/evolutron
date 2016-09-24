@@ -15,6 +15,9 @@ def sigmoid(x):
     except OverflowError:
         return 0
 
+def cube(x):
+    return x**3
+
 class Neuron(pygame.sprite.Sprite):
     def __init__(self, input_weights, initial_value=None, fn=sigmoid):
         super(Neuron, self).__init__()
@@ -50,6 +53,14 @@ class Neuron(pygame.sprite.Sprite):
 
         self.image.blit(text, textpos)
 
+    def dump(self):
+        obj = {
+            'fn': self.fn.__name__,
+            'value': self.value,
+            'input_weights': self.input_weights,
+        }
+        return obj
+
 
 class Brain(object):
     def __init__(self, input_weights, output_weights):
@@ -72,7 +83,7 @@ class Brain(object):
             self.hidden0.append(Neuron(neuron_input_weights))
         self.outputs = []
         for output_neuron_weights in output_weights:
-            self.outputs.append(Neuron(output_neuron_weights, fn=lambda x: x**3))
+            self.outputs.append(Neuron(output_neuron_weights, fn=cube))
 
     def process(self, *input_values):
         for neuron, input_value in zip(self.inputs, input_values):
@@ -86,6 +97,15 @@ class Brain(object):
     def __repr__(self):
         return 'Brain(%r, %r)' % (self.input_weights, self.output_weights)
 
+    def dump(self):
+        obj = {
+            'input_weights': self.input_weights,
+            'output_weights': self.output_weights,
+            'inputs': [neuron.dump() for neuron in self.inputs],
+            'hidden0': [neuron.dump() for neuron in self.hidden0],
+            'outputs': [neuron.dump() for neuron in self.outputs],
+        }
+        return obj
 
 class NumpyBrain(object):
     '''Alternative implementation of Brain, using numpy matrix multiplication.
@@ -113,13 +133,16 @@ if use_numpy:
     Brain = NumpyBrain
 
 class Character(pygame.sprite.Sprite):
-    brain_inputs = 4
+    brain_inputs = 3
     brain_outputs = 3
     def __init__(self, world, radius):
         super(Character, self).__init__()
 
         self.world = world
-        self.bred = 0
+        self.genome = None
+
+        # Senses
+        self.haptic = 0 # touching anything
 
         # Physical properties
         self.r = radius   # radius, m
@@ -128,16 +151,12 @@ class Character(pygame.sprite.Sprite):
         self._created = 0.0 # age of world
 
         self._angle = math.pi / 2.0 # radians clockwise from north
-        self._angle_change = 0.0
-
         self._speed = 0.0 # m/s
-        self._acceleration = 0.0 # m/s^2
 
         self._energy = 300 # J
         self._energy_burn_rate = 25 # J/s
         self._age = 0.0 # s
         self.gen = 0
-        self._spawn = 0.0 # > 0 means try to reproduce
 
         self.brain = None
 
@@ -187,7 +206,7 @@ class Character(pygame.sprite.Sprite):
             assert 0
 
         self.brain = Brain(input_weights, output_weights)
-        self._genome = genome
+        self.genome = genome
         return self
 
     def _draw_border(self, colour):
@@ -243,15 +262,14 @@ class Character(pygame.sprite.Sprite):
         # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
             1,
-            self._angle,
-            self._speed,
+            self.haptic,
             self._energy / 1000,
         )
         outputs = self.brain.process(*inputs)
         (
-            self._angle_change,
-            self._acceleration,
-            self._spawn,
+            angle_change,
+            acceleration,
+            spawn,
         ) = outputs
 
         # eating:
@@ -263,13 +281,12 @@ class Character(pygame.sprite.Sprite):
             food.eaten()
 
         # reproducing:
-        if self._spawn and self._energy > 350 and self._age > 3:
+        if spawn and self._energy > 350 and self._age > 3:
             self._energy -= 300
-            newgenome = self._genome.mutate()
+            newgenome = self.genome.mutate()
             newchar = self.__class__.from_genome(world, newgenome)
             newchar.x = self._x
             newchar.y = self._y
-            newchar.bred = 1
             newchar.gen = self.gen + 1
             op = operator.sub
             while pygame.sprite.spritecollideany(newchar, world.allcharacters):
@@ -280,9 +297,9 @@ class Character(pygame.sprite.Sprite):
 
         # movement:
         prev_x, prev_y = self._x, self._y
-        self._speed += (self._acceleration * dt)
+        self._speed += (acceleration * dt)
         ddist = self._speed * dt
-        self._angle = (self._angle + (self._angle_change * dt)) % (2 * math.pi)
+        self._angle = (self._angle + (angle_change * dt)) % (2 * math.pi)
         x = self._x + ddist * math.sin(self._angle)
         y = self._y - ddist * math.cos(self._angle)
         self.x = min(max(0, x), self.world.canvas_w - self.r)
@@ -293,7 +310,10 @@ class Character(pygame.sprite.Sprite):
             if item is not self:
                 self.x = prev_x
                 self.y = prev_y
-                self._speed = 0
+                self.haptic = 1
+                break
+        else:
+            self.haptic = 0
 
     @property
     def x(self):
@@ -319,7 +339,6 @@ class Character(pygame.sprite.Sprite):
             "created at: %.2fs" % self._created,
             "age: %.2fs" % self._age,
             "generation: %d" % self.gen,
-            "spawn: %.2f" % self._spawn,
             "energy: %.2fJ" % self._energy,
             "r: %dm" % self.r,
             "angle: %.2f radians" % self._angle,
@@ -328,3 +347,19 @@ class Character(pygame.sprite.Sprite):
             "y: %dm S" % self._y,
         ])
 
+    def dump(self):
+        obj = {
+            'r': self.r,
+            'x': self.x,
+            'y': self.y,
+            'created': self._created,
+            'angle': self._angle,
+            'speed': self._speed,
+            'energy': self._energy,
+            'energy_burn_rate': self._energy_burn_rate,
+            'age': self._age,
+            'gen': self.gen,
+            'brain': self.brain.dump(),
+            'genome': self.genome.dump(),
+        }
+        return obj
