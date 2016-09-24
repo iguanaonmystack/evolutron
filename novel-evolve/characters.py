@@ -15,6 +15,9 @@ def sigmoid(x):
     except OverflowError:
         return 0
 
+def identity(x):
+    return x
+
 def cube(x):
     return x**3
 
@@ -83,7 +86,7 @@ class Brain(object):
             self.hidden0.append(Neuron(neuron_input_weights))
         self.outputs = []
         for output_neuron_weights in output_weights:
-            self.outputs.append(Neuron(output_neuron_weights, fn=cube))
+            self.outputs.append(Neuron(output_neuron_weights, fn=identity))
 
     def process(self, *input_values):
         for neuron, input_value in zip(self.inputs, input_values):
@@ -238,7 +241,7 @@ class Character(pygame.sprite.Sprite):
         if self.world.active_item is self:
             self.world.active_item = None
 
-    def update(self, dt):
+    def update(self):
         world = self.world
 
         # observing world
@@ -253,8 +256,8 @@ class Character(pygame.sprite.Sprite):
                     pass
 
         # energy and age:
-        self._age += dt
-        self._energy -= self._energy_burn_rate * dt
+        self._age += 1
+        self._energy -= self._energy_burn_rate
         if self._energy <= 0:
             self.die()
             return
@@ -297,9 +300,9 @@ class Character(pygame.sprite.Sprite):
 
         # movement:
         prev_x, prev_y = self._x, self._y
-        self._speed += (acceleration * dt)
-        ddist = self._speed * dt
-        self._angle = (self._angle + (angle_change * dt)) % (2 * math.pi)
+        self._speed += acceleration
+        ddist = self._speed
+        self._angle = (self._angle + angle_change) % (2 * math.pi)
         x = self._x + ddist * math.sin(self._angle)
         y = self._y - ddist * math.cos(self._angle)
         self.x = min(max(0, x), self.world.canvas_w - self.r)
@@ -336,13 +339,13 @@ class Character(pygame.sprite.Sprite):
     def __str__(self):
         return '\n'.join([
             "Character:",
-            "created at: %.2fs" % self._created,
-            "age: %.2fs" % self._age,
+            "created at: %.2ft" % self._created,
+            "age: %.2ft" % self._age,
             "generation: %d" % self.gen,
             "energy: %.2fJ" % self._energy,
             "r: %dm" % self.r,
             "angle: %.2f radians" % self._angle,
-            "speed: %.2fm/s" % self._speed,
+            "speed: %.2fm/t" % self._speed,
             "x: %dm E" % self._x,
             "y: %dm S" % self._y,
         ])

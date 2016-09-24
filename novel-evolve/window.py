@@ -41,10 +41,10 @@ class Window(object):
             self.genesview.resize(Rect(0, window_h - 300, 200, 200))
             self.popview.resize(Rect(0, window_h - 100, 200, 100))
 
-    def update(self, dt):
-        self.world.update(dt)
+    def update(self):
+        self.world.update()
 
-    def frame(self, tick_progress):
+    def frame(self):
         self.background.fill((128,128,128))
         self.allsprites.draw(self.background)
         self.screen.blit(self.background, (0,0))

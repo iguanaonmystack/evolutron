@@ -1,1 +1,0 @@
-http://www.pygame.org/wiki/ConstantGameSpeed?parent=CookBook

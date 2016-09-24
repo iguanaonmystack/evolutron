@@ -10,8 +10,6 @@ random.seed(100)
 import pygame
 from pygame.locals import *
 
-import gameclock
-
 import tiles
 import characters
 import window as _window
@@ -36,22 +34,35 @@ def main():
     if args.screenshot:
         os.putenv('SDL_VIDEODRIVER', 'fbcon')
         pygame.display.init()
-        window.update(1)
-        window.update(1)
-        window.frame(0)
+        for i in range(10):
+            window.update()
+        window.frame()
         pygame.image.save(window.screen, args.screenshot)
         return
 
-    clock = gameclock.GameClock(
-        max_ups=60,     # game running speed
-        max_fps=60,     # supposed max fps
-        use_wait=True,
-        update_callback=window.update,
-        frame_callback=window.frame,
-        paused_callback=None)
-
+    tickrate = 1/60.  # target maximum
+    framerate = 1/60. # will never be faster than tick rate
+    last_t = t = time.perf_counter() # py3.3 +
+    last_frame = time.perf_counter()
+    render = True
+    pause = False
     while 1:
-        clock.tick()
+        last_t = t
+        t = time.perf_counter()
+        time_passed = t - last_t
+        print('sleeping', tickrate - time_passed)
+        time.sleep(max(0, tickrate - time_passed))
+        
+        if not pause:
+            t1 = time.perf_counter()
+            window.update()
+            t2 = time.perf_counter()
+            print('tick time', t2 - t1, 'target tickrate', tickrate)
+
+        if t - last_frame > framerate and render:
+            print('frame time', t - last_frame)
+            window.frame()
+            last_frame = t
 
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -60,15 +71,15 @@ def main():
                 if event.key == K_ESCAPE or event.key == K_q:
                     return
                 elif event.key == K_p:
-                    if clock.update_callback is None:
-                        clock.update_callback = window.update
+                    if pause:
+                        pause = False
                     else:
-                        clock.update_callback = None
+                        pause = True
                 elif event.key == K_r:
-                    if clock.frame_callback is None:
-                        clock.frame_callback = window.frame
+                    if render:
+                        render = False
                     else:
-                        clock.frame_callback = None
+                        render = True
                 elif event.key == K_d:
                     if window.world.active_item:
                         with open('active-%s.json'%int(time.time()), 'w') as f:
