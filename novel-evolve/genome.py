@@ -33,7 +33,7 @@ class Genome(object):
     def _mutate_single(self, value, rate):
         r = random.random()
         if r < rate:
-            value += random.random() - 0.5
+            value += random.random() * 2 - 1
         return value
 
     def mutate(self, rate=0.01):
