@@ -17,16 +17,24 @@ import window as _window
 def main():
     parser = argparse.ArgumentParser(description='An evolution simulator')
     parser.add_argument(
-        '--screenshot', dest='screenshot', action='store', default=False,
-        help='Take a screenshot and exit')
+        '--screenshot', dest='screenshot', metavar='f', action='store',
+        default=False,
+        help='Take a screenshot, save to given filename, and exit')
     parser.add_argument(
         '--profile', dest='profile', action='store_true', default=False,
         help='Run headless for 1000 ticks to get profile data')
+    parser.add_argument(
+        '--inspect', metavar='f', dest='inspect', action='store', default=None,
+        help='Run inspector for the given file')
     args = parser.parse_args()
 
     if args.screenshot:
         os.environ['SDL_VIDEODRIVER'] = 'dummy'
     pygame.init()
+
+    if args.inspect:
+        import inspectmain
+        return inspectmain.main(args)
 
     screen = pygame.display.set_mode((1000, 1000), RESIZABLE, 32)
     window = _window.Window(screen, 2000, 2000)

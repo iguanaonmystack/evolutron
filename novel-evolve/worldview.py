@@ -4,7 +4,6 @@ import pygame
 from pygame.locals import *
 
 from novel.world import World
-from novel import terrains
 
 import viewport
 import tiles
