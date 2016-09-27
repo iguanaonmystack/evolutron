@@ -3,8 +3,6 @@ import random
 import pygame
 from pygame.locals import *
 
-from novel import terrains
-
 import group
 import food
 import tree
@@ -22,17 +20,17 @@ class TileView(pygame.sprite.Sprite):
         self.r_mult = 255
         self.g_mult = 0
         self.b_mult = 0
-        if isinstance(self.tile.terrain, terrains.Meadow):
+        if self.tile.terrain == 'meadow':
             self.fertility_mult = 0.005
             self.r_mult = 120
             self.g_mult = 180
             self.b_mult = 120
-        elif isinstance(self.tile.terrain, terrains.Lake):
+        elif self.tile.terrain == 'lake':
             self.fertility_mult = 0
             self.r_mult = 0
             self.g_mult = 0
             self.b_mult = 215
-        elif isinstance(self.tile.terrain, terrains.Forest):
+        elif self.tile.terrain == 'forest':
             self.fertility_mult = 0.010
             self.r_mult = 0
             self.g_mult = 215
@@ -57,7 +55,7 @@ class TileView(pygame.sprite.Sprite):
         self.allfood = group.Group()
         self.max_food = 10
 
-        if isinstance(tile.terrain, terrains.Forest):
+        if tile.terrain == 'forest':
             t = tree.Tree(
                 self,
                 random.randint(4, 18), # radius

@@ -3,13 +3,12 @@ import random
 import pygame
 from pygame.locals import *
 
-from novel.world import World
-
 import viewport
 import tiles
 import characters
 import group
 import tree
+import mapgen
 
 MIN_CHARACTERS = 100
 
@@ -19,7 +18,7 @@ class WorldView(viewport.Viewport):
 
         self.tile_w = 50
         self.tile_h = 50
-        self.world = World.from_random(canvas_w//self.tile_w, canvas_h//self.tile_h)
+        self.map = mapgen.Map.from_random(canvas_w//self.tile_w, canvas_h//self.tile_h)
 
         self.alltiles = group.Group()
         self.alltiles_coords = {}
@@ -28,7 +27,7 @@ class WorldView(viewport.Viewport):
         self.allfood = group.Group()
 
         # Generate tiles and trees
-        for i, row in enumerate(self.world):
+        for i, row in enumerate(self.map):
             for j, tile in enumerate(row):
 
                 block = tiles.TileView(
