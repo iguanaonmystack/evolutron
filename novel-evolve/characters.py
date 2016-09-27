@@ -35,9 +35,6 @@ class Neuron(pygame.sprite.Sprite):
         if self.fn is not None:
             self.value = self.fn(self.value)
 
-    def __repr__(self):
-        return "Neuron(%r, %r, %r)" % (self.input_weights, self.value, self.fn)
-
     def connect_viewport(self, viewport):
         self.image = pygame.Surface((40, 40), SRCALPHA).convert_alpha()
         self.rect = self.image.get_rect()
@@ -50,11 +47,26 @@ class Neuron(pygame.sprite.Sprite):
         if self.viewport.active_item is self:
             colour = 0, 255, 0
         pygame.draw.circle(self.image, colour, centrepos, 20, 0)
-        text = self.font.render(str('%0.1f'%self.value), True, (0, 0, 0))
+        text = self.font.render(
+            str(self.value and '%0.1f'%self.value), True, (0, 0, 0))
         rect = text.get_rect()
         textpos = centrepos[0] - rect.w // 2, centrepos[1] - rect.h // 2
 
         self.image.blit(text, textpos)
+
+    def __repr__(self):
+        return "Neuron(%r, %r, %r)" % (self.input_weights, self.value, self.fn)
+
+    def __str__(self):
+        lines = [
+            'Neuron:',
+            'Current value: %r' % self.value,
+            'Activation function: %r' % self.fn.__name__,
+            'Input weights:'
+        ]
+        for i, input_weight in enumerate(self.input_weights):
+            lines.append('    %d: %r' % (i, input_weight))
+        return '\n'.join(lines)
 
     def dump(self):
         obj = {
@@ -80,7 +92,7 @@ class Brain(object):
         self.input_weights = input_weights
         self.output_weights = output_weights
         num_inputs = input_weights and len(input_weights[0]) or 0
-        self.inputs = [Neuron([], 0) for i in range(num_inputs)]
+        self.inputs = [Neuron([], 0, fn=identity) for i in range(num_inputs)]
         self.hidden0 = []
         for neuron_input_weights in input_weights:
             self.hidden0.append(Neuron(neuron_input_weights))
@@ -91,6 +103,9 @@ class Brain(object):
     def process(self, *input_values):
         for neuron, input_value in zip(self.inputs, input_values):
             neuron.value = input_value
+        return self.reprocess()
+
+    def reprocess(self):
         for neuron in self.hidden0:
             neuron.process(self.inputs)
         for output in self.outputs:
@@ -109,6 +124,11 @@ class Brain(object):
             'outputs': [neuron.dump() for neuron in self.outputs],
         }
         return obj
+    
+    @classmethod
+    def load(cls, obj):
+        self = cls(obj['input_weights'], obj['output_weights'])
+        return self
 
 class NumpyBrain(object):
     '''Alternative implementation of Brain, using numpy matrix multiplication.
@@ -373,3 +393,20 @@ class Character(pygame.sprite.Sprite):
             'genome': self.genome.dump(),
         }
         return obj
+    
+    @classmethod
+    def load(cls, obj):
+        self = cls(None, obj['r'])
+        self._x = obj['x']
+        self._y = obj['y']
+        self._created = obj['created']
+        self._angle = obj['angle']
+        self.speed = obj['speed']
+        self._energy = obj['energy']
+        self._energy_burn_rate = obj['energy_burn_rate']
+        self.age = obj['age']
+        self.gen = obj['gen']
+        self.brain = Brain.load(obj['brain'])
+        #self.genome = genome.Genome.load(obj['genome'])
+        return self
+

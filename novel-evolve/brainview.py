@@ -5,17 +5,16 @@ from pygame.locals import *
 import viewport
 import group
 
-def neuron_centre(layer, node_index):
-    return [20 + 75 * layer, 40 + 60 * node_index]
 
 class BrainView(viewport.Viewport):
 
-    def __init__(self, parent, viewport_rect):
+    def __init__(self, parent, viewport_rect, neuron_spacing=(75, 60)):
         super(BrainView, self).__init__(
             parent, viewport_rect, viewport_rect.w, 1000)
         self._brain = None
         self.font = pygame.font.Font(None, 18)
         self.active_item = None
+        self.neuron_spacing = neuron_spacing
     
     @property
     def brain(self):
@@ -31,10 +30,14 @@ class BrainView(viewport.Viewport):
         for i, layer in enumerate((brain.inputs, brain.hidden0, brain.outputs)):
             for j, neuron in enumerate(layer):
                 neuron.connect_viewport(self)
-                centre = neuron_centre(i, j)
+                centre = self.neuron_centre(i, j)
                 neuron.rect.x = centre[0] - neuron.rect.w // 2
                 neuron.rect.y = centre[1] - neuron.rect.h // 2
                 self.allneurons.add(neuron)
+
+    def neuron_centre(self, layer, node_index):
+        return [20 + self.neuron_spacing[0] * layer,
+                40 + self.neuron_spacing[1] * node_index]
 
     def draw(self):
         brain = self._brain
@@ -47,11 +50,11 @@ class BrainView(viewport.Viewport):
 
         input_labels = ('const', 'haptic', 'energy/k')
         hidden_labels = ()
-        output_labels = ('angle ch', 'acc', 'spawn')
+        output_labels = ('angle ch', 'impulse', 'spawn')
 
         for i, layer in enumerate((input_labels, hidden_labels, output_labels)):
             for j, label in enumerate(layer):
-                centrepos = neuron_centre(i, j)
+                centrepos = self.neuron_centre(i, j)
                 centrepos[0] -= 20
                 centrepos[1] -= 30
                 text = self.font.render(label, True, (255, 255, 255))
@@ -72,15 +75,16 @@ class BrainView(viewport.Viewport):
                         colour = (0, val, val)
                     else:
                         colour = (val, 0, 0)
-                    start = neuron_centre(i - 1, k)
-                    end = neuron_centre(i, j)
+                    start = self.neuron_centre(i - 1, k)
+                    end = self.neuron_centre(i, j)
                     pygame.draw.line(self.canvas, colour, start, end, 2)
                     if self.active_item:
                         text = self.font.render(
                             '%.2f' % weight, True, (255, 255, 255))
+                        rect = text.get_rect()
                         label_pos = (
-                            start[0] + 23,
-                            (start[1] + end[1]) // 2)
+                            (start[0] + end[0]) // 2 - rect.w // 2,
+                            (start[1] + end[1]) // 2 - rect.h // 2)
                         self.canvas.blit(text, label_pos)
         self.allneurons.draw(self.canvas)
 

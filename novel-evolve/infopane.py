@@ -11,7 +11,7 @@ class InfoPane(viewport.Viewport):
             parent, viewport_rect, viewport_rect.w, 1000)
         self._text = ''
         self._text_changed = True
-        self.font = pygame.font.Font(None, 18)
+        self.font = pygame.font.SysFont('DejaVuSansMono,FreeMono,Monospace', 12)
     
     def draw(self):
         if self._text_changed:
