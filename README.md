@@ -28,3 +28,12 @@ $ cd novel-evolve
 $ python novel-evolve
 ```
 
+License
+-------
+
+This code is licenced under the MIT license; see LICENSE for the full text.
+
+Essentially this means you can do what you wish with the code. An attribution to http://github.com/flexo would be appreciated.
+
+(Please note that this license does not apply to my Youtube videos or other resources external to this repository.)
+

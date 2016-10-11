@@ -24,6 +24,10 @@ def main():
         '--profile', dest='profile', action='store_true', default=False,
         help='Run headless for 1000 ticks to get profile data')
     parser.add_argument(
+        '-f', '--fullscreen', dest='fullscreen', action='store_true',
+        default=False,
+        help='Run full-screen')
+    parser.add_argument(
         '--inspect', metavar='f', dest='inspect', action='store', default=None,
         help='Run inspector for the given file')
     args = parser.parse_args()
@@ -35,8 +39,12 @@ def main():
     if args.inspect:
         import inspectmain
         return inspectmain.main(args)
-
-    screen = pygame.display.set_mode((1000, 1000), RESIZABLE, 32)
+    
+    flags = 0 #RESIZABLE
+    if args.fullscreen:
+        print('running full screen')
+        flags = FULLSCREEN
+    screen = pygame.display.set_mode((1280, 720), flags, 32)
     window = _window.Window(screen, 2000, 2000)
 
     mousedown_pos = None

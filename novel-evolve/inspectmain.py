@@ -81,7 +81,7 @@ def main(args):
     savedata = json.load(open(args.inspect))
     character = characters.Character.load(savedata)
 
-    screen = pygame.display.set_mode((1000, 1000))
+    screen = pygame.display.set_mode((1280, 720))
     window = InspectWindow(screen, character)
 
     mousedown_pos = None

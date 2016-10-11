@@ -14,30 +14,36 @@ class Window(object):
     def __init__(self, screen, world_w, world_h):
 
         self.screen = screen
-        self.onresize(1000, 1000)
+        screen_w, screen_h = screen.get_size()
+        self.onresize(screen_w, screen_h)
 
         self.allsprites = group.Group()
 
         self.world = worldview.WorldView(
-            self, Rect(200, 0, 1000 - 200, 1000), world_w, world_h)
+            self, Rect(200, 0, screen_w - 200, screen_h), world_w, world_h)
         self.allsprites.add(self.world)
 
-        self.infopane = infopane.InfoPane(self, Rect(0, 0, 200, 300))
+        self.infopane = infopane.InfoPane(self, Rect(0, 0, 200, 150))
         self.allsprites.add(self.infopane)
 
-        self.brainview = brainview.BrainView(self, Rect(0, 300, 200, 400))
+        brainview_height = screen_h - 150 - 200 - 100
+        self.brainview = brainview.BrainView(
+            self, Rect(0, 150, 200, brainview_height))
         self.allsprites.add(self.brainview)
 
-        self.genesview = popview.GenePopView(self, Rect(0, 700, 200, 200))
+        self.genesview = popview.GenePopView(
+            self, Rect(0, screen_h - 300, 200, 200))
         self.allsprites.add(self.genesview)
-        self.popview = popview.TimePopView(self, Rect(0, 900, 200, 100))
+
+        self.popview = popview.TimePopView(
+            self, Rect(0, screen_h - 100, 200, 100))
         self.allsprites.add(self.popview)
 
     def onresize(self, window_w, window_h):
         self.background = pygame.Surface(self.screen.get_size()).convert()
         if hasattr(self, 'world'):
             self.world.resize(Rect(200, 0, window_w - 200, window_h))
-            self.brainview.resize(Rect(0, 300, 200, window_h - 600))
+            self.brainview.resize(Rect(0, 150, 200, window_h - 150 - 200 - 100))
             self.genesview.resize(Rect(0, window_h - 300, 200, 200))
             self.popview.resize(Rect(0, window_h - 100, 200, 100))
 

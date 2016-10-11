@@ -33,7 +33,7 @@ class TextBox(pygame.sprite.Sprite):
         self.image.blit(text, (2, 2))
     
     def onclick(self, pos, button):
-        print("click!", id(self))
+        pass
 
     def onevent(self, event):
         if event.type == KEYDOWN:
