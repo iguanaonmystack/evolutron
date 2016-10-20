@@ -91,10 +91,10 @@ class WorldView(viewport.Viewport):
             canvas_pos = [relpos[i] - self.drag_offset[i] for i in (0, 1)]
             clicked_sprites = []
             if not clicked_sprites:
-                clicked_sprites = [s for s in self.allcharacters
+                clicked_sprites = [s for s in self.allcharacters.spritedict
                                    if s.rect.collidepoint(canvas_pos)]
             if not clicked_sprites:
-                clicked_sprites = [s for s in self.alltiles
+                clicked_sprites = [s for s in self.alltiles.spritedict
                                    if s.rect.collidepoint(canvas_pos)]
 
             if clicked_sprites:
