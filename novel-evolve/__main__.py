@@ -1,3 +1,5 @@
+import pyximport; pyximport.install()
+
 import os
 import sys
 import time
@@ -62,7 +64,7 @@ def main():
         return
     
     if args.profile:
-        for i in range(100):
+        for i in range(1000):
             window.update()
         return
 
