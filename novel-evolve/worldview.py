@@ -59,6 +59,7 @@ class WorldView(viewport.Viewport):
             self._create_character()
         for group in (self.alltiles, self.allcharacters):
             group.update()
+        self.allcharacters.collisions()
 
     def jump_to(self, item):
         x = item.rect.x - self.rect.w // 2

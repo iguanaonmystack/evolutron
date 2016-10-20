@@ -171,6 +171,8 @@ class Character(pygame.sprite.Sprite):
         self.r = radius   # radius, m
         self._x = None # x coord, m
         self._y = None # y coord, m
+        self.prev_x = None # 
+        self.prev_y = None # temporary while I sort out collisions
         self._created = 0.0 # age of world
 
         self._angle = math.pi / 2.0 # radians clockwise from north
@@ -324,7 +326,7 @@ class Character(pygame.sprite.Sprite):
         # movement:
         Ffriction = self.speed / 4
         acceleration = (Fmove - Ffriction) / (self.r)
-        prev_x, prev_y = self._x, self._y
+        self.prev_x, self.prev_y = self._x, self._y
         self.speed += acceleration
         ddist = self.speed
         self._angle = (self._angle + angle_change) % (2 * math.pi)
@@ -332,18 +334,17 @@ class Character(pygame.sprite.Sprite):
         y = self._y - ddist * math.cos(self._angle)
         self.x = min(max(0, x), self.world.canvas_w - self.r)
         self.y = min(max(0, y), self.world.canvas_h - self.r)
-        collided = pygame.sprite.spritecollide(self, world.allcharacters, 0)
+        collided = []
         for tile in check_tiles:
             collided.extend(pygame.sprite.spritecollide(self, tile.alltrees, 0))
         for item in collided:
-            if item is not self:
-                self.x = prev_x
-                self.y = prev_y
-                self.speed = 0
-                self.haptic = 1
-                break
+            self.x = self.prev_x
+            self.y = self.prev_y
+            self.speed = 0
+            self.haptic = 1
+            break
         else:
-            self.haptic = 0
+            self.haptic = 0 # may still be updated by Group.collisions()
 
     @property
     def x(self):
