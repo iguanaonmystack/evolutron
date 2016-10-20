@@ -58,7 +58,7 @@ class Window(object):
 
     def ondrag(self, origin, rel):
         # rel: usually (0, 0) (-1, 0), (0, 1), etc
-        clicked_sprites = [s for s in self.allsprites if s.rect.collidepoint(origin)]
+        clicked_sprites = [s for s in self.allsprites.spritedict if s.rect.collidepoint(origin)]
         for sprite in clicked_sprites:
             # probably just one
             if hasattr(sprite, 'ondrag'):
@@ -66,7 +66,7 @@ class Window(object):
 
     def onclick(self, screenpos, button):
         # button: 1/2/3=left/middle/right, 4/5=wheel
-        clicked_sprites = [s for s in self.allsprites if s.rect.collidepoint(screenpos)]
+        clicked_sprites = [s for s in self.allsprites.spritedict if s.rect.collidepoint(screenpos)]
         for sprite in clicked_sprites:
             if hasattr(sprite, 'onclick'):
                 relpos = (screenpos[0] - sprite.rect.x, screenpos[1] - sprite.rect.y)
