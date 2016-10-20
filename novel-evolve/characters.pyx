@@ -1,3 +1,5 @@
+# cython: profile=True
+
 import math
 import struct
 import random
@@ -22,6 +24,7 @@ def cube(x):
     return x**3
 
 class Neuron(pygame.sprite.Sprite):
+
     def __init__(self, input_weights, initial_value=None, fn=sigmoid):
         super(Neuron, self).__init__()
         self.fn = fn
@@ -30,11 +33,15 @@ class Neuron(pygame.sprite.Sprite):
         self.input_weights = input_weights[:]
 
     def process(self, inputs):
-        self.raw_value = sum(
-            input_.value * weight
-            for input_, weight in zip(inputs, self.input_weights))
-        if self.fn is not None:
-            self.value = self.fn(self.raw_value)
+        cdef int i, inputs_len
+        cdef double raw_value = 0.0
+        inputs_len = len(inputs)
+        for i in range(inputs_len):
+            input_ = inputs[i]
+            weight = self.input_weights[i]
+            raw_value += input_.value * weight
+        self.raw_value = raw_value
+        self.value = self.fn(self.raw_value)
 
     def connect_viewport(self, viewport):
         self.image = pygame.Surface((40, 40), SRCALPHA).convert_alpha()
