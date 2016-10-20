@@ -25,15 +25,16 @@ class Neuron(pygame.sprite.Sprite):
     def __init__(self, input_weights, initial_value=None, fn=sigmoid):
         super(Neuron, self).__init__()
         self.fn = fn
+        self.raw_value = initial_value
         self.value = initial_value
         self.input_weights = input_weights[:]
 
     def process(self, inputs):
-        self.value = sum(
+        self.raw_value = sum(
             input_.value * weight
             for input_, weight in zip(inputs, self.input_weights))
         if self.fn is not None:
-            self.value = self.fn(self.value)
+            self.value = self.fn(self.raw_value)
 
     def connect_viewport(self, viewport):
         self.image = pygame.Surface((40, 40), SRCALPHA).convert_alpha()
@@ -64,8 +65,11 @@ class Neuron(pygame.sprite.Sprite):
             'Activation function: %r' % self.fn.__name__,
             'Input weights:'
         ]
+        weight_sum = 0
         for i, input_weight in enumerate(self.input_weights):
             lines.append('    %d: %r' % (i, input_weight))
+            weight_sum += input_weight
+        lines.append('Sum wt[i] * input[i]: %r' % self.raw_value)
         return '\n'.join(lines)
 
     def dump(self):
