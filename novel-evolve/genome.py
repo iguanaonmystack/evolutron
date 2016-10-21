@@ -17,7 +17,7 @@ class Genome(object):
     def from_random(cls, inputs, outputs):
         self = cls(inputs, outputs)
         self.radius = random.randint(5, 20)
-        self.hidden_neurons = random.randint(2, 8)
+        self.hidden_neurons = random.randint(2, 5)
 
         # For each hidden neuron, generate the weight for each input and for
         # each output
@@ -64,6 +64,34 @@ class Genome(object):
             '%s %s %s'%(len(new.hidden0_weights), new.hidden_neurons, new._inputs)
         assert len(new.output_weights) == new.hidden_neurons * new._outputs, \
             '%s %s %s'%(len(new.output_weights), new.hidden_neurons, new._outputs)
+        return new
+
+    @classmethod
+    def from_parents(cls, p1, p2, rate=0.01):
+        new = cls(p1._inputs, p1._outputs) # currently does not vary
+        new.radius = p1.radius if random.random() < 0.5 else p2.radius
+        new.hidden_neurons = (
+            p1.hidden_neurons if random.random() < 0.5 else p2.hidden_neurons)
+
+        # assign p1 to be the parent with fewer hidden neurons:
+        if p1.hidden_neurons > p2.hidden_neurons:
+            p1, p2 = p2, p1
+
+        for i in range(new.hidden_neurons):
+            offset = new._inputs * i
+            for j in range(new._inputs):
+                if i >= p1.hidden_neurons:
+                    parent = p2
+                else:
+                    parent = p1 if random.random() < 0.5 else p2
+                new.hidden0_weights.append(parent.hidden0_weights[offset + j])
+            for j in range(new._outputs):
+                if i >= p1.hidden_neurons:
+                    parent = p2
+                else:
+                    parent = p1 if random.random() < 0.5 else p2
+                new.output_weights.append(parent.output_weights[offset + j])
+        new = new.mutate(rate)
         return new
 
     def __str__(self):

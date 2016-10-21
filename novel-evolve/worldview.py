@@ -20,11 +20,11 @@ class WorldView(viewport.Viewport):
         self.tile_h = 50
         self.map = mapgen.Map.from_random(canvas_w//self.tile_w, canvas_h//self.tile_h)
 
-        self.alltiles = group.Group()
+        self.alltiles = group.Group(self)
         self.alltiles_coords = {}
 
-        self.alltrees = group.Group()
-        self.allfood = group.Group()
+        self.alltrees = group.Group(self)
+        self.allfood = group.Group(self)
 
         # Generate tiles and trees
         for i, row in enumerate(self.map):
@@ -36,7 +36,7 @@ class WorldView(viewport.Viewport):
                 self.alltiles.add(block)
                 self.alltiles_coords[i, j] = block
 
-        self.allcharacters = group.Group()
+        self.allcharacters = group.Group(self)
         self.active_item = None
         self.age = 0.0
 
