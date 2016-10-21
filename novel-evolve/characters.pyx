@@ -188,11 +188,13 @@ class Character(pygame.sprite.Sprite):
 
         self._angle = math.pi / 2.0 # radians clockwise from north
         self.speed = 0.0 # m/tick
+        self.spawn = 0.0
 
-        self._energy = 2000 # J
+        self.energy = 2000 # J
         self._energy_burn_rate = 10 # J/tick
         self.age = 0 # ticks
         self.gen = 0
+        self.parents = 0
 
         self.brain = None
 
@@ -258,8 +260,11 @@ class Character(pygame.sprite.Sprite):
             self._draw_border((0, 0, 0, 0))
 
         r_r = (self.r + 2, self.r + 2)
-        liveness = int(min(1.0, self._energy / 2000 + 0.5) * 255)
-        pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r + 2, 0)
+        liveness = int(min(1.0, (self.energy / 6000.) + 0.5) * 255)
+        if self.parents == 0:
+            pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r + 2, 0)
+        else:
+            pygame.draw.circle(self.image, (0, 0, 0), r_r, self.r + 2, 0)
         pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
         eye_pos = list(r_r)
         eye_pos[0] += int((self.r - 5) * math.sin(self._angle))
@@ -290,49 +295,50 @@ class Character(pygame.sprite.Sprite):
 
         # energy and age:
         self.age += 1
-        self._energy -= self._energy_burn_rate
-        if self._energy <= 0:
-            self.die()
-            return
 
         # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
             1,
             self.haptic,
-            self._energy / 1000,
+            self.energy / 1000,
         )
         outputs = self.brain.process(*inputs)
         (
             angle_change,
             Fmove,
-            spawn,
+            self.spawn,
         ) = outputs
         # compensate values from NN
         Fmove *= 3
         angle_change /= 2
+
+        self.energy -= abs(Fmove) + 10
+        if self.energy <= 0:
+            self.die()
+            return
 
         # eating:
         foods = []
         for tile in check_tiles:
             foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
         for food in foods:
-            self._energy += food.energy
+            self.energy += food.energy
             food.eaten()
 
-        # reproducing:
-        if spawn and self._energy > 3000:
-            self._energy -= 3000
-            newgenome = self.genome.mutate()
-            newchar = self.__class__.from_genome(world, newgenome)
-            newchar.x = self._x
-            newchar.y = self._y
-            newchar.gen = self.gen + 1
-            op = operator.sub
-            while pygame.sprite.spritecollideany(newchar, world.allcharacters):
-                newchar.x = op(newchar.x, 1)
-                if newchar.x < 1:
-                    op = operator.add
-            world.allcharacters.add(newchar)
+        ## reproducing:
+        #if self.spawn and self.energy > 3000:
+        #    self.energy -= 3000
+        #    newgenome = self.genome.mutate()
+        #    newchar = self.__class__.from_genome(world, newgenome)
+        #    newchar.x = self._x
+        #    newchar.y = self._y
+        #    newchar.gen = self.gen + 1
+        #    op = operator.sub
+        #    while pygame.sprite.spritecollideany(newchar, world.allcharacters):
+        #        newchar.x = op(newchar.x, 1)
+        #        if newchar.x < 1:
+        #            op = operator.add
+        #    world.allcharacters.add(newchar)
 
         # movement:
         Ffriction = self.speed / 4
@@ -343,8 +349,8 @@ class Character(pygame.sprite.Sprite):
         self._angle = (self._angle + angle_change) % (2 * math.pi)
         x = self._x + ddist * math.sin(self._angle)
         y = self._y - ddist * math.cos(self._angle)
-        self.x = min(max(0, x), self.world.canvas_w - self.r)
-        self.y = min(max(0, y), self.world.canvas_h - self.r)
+        self.x = min(max(0, x), world.canvas_w - self.r)
+        self.y = min(max(0, y), world.canvas_h - self.r)
         collided = []
         for tile in check_tiles:
             collided.extend(pygame.sprite.spritecollide(self, tile.alltrees, 0))
@@ -381,7 +387,7 @@ class Character(pygame.sprite.Sprite):
             "created at: %dt" % self._created,
             "age: %dt" % self.age,
             "generation: %d" % self.gen,
-            "energy: %.2fJ" % self._energy,
+            "energy: %.2fJ" % self.energy,
             "r: %dm" % self.r,
             "angle: %.2f radians" % self._angle,
             "speed: %.2fm/t" % self.speed,
@@ -397,7 +403,7 @@ class Character(pygame.sprite.Sprite):
             'created': self._created,
             'angle': self._angle,
             'speed': self.speed,
-            'energy': self._energy,
+            'energy': self.energy,
             'energy_burn_rate': self._energy_burn_rate,
             'age': self.age,
             'gen': self.gen,
@@ -414,7 +420,7 @@ class Character(pygame.sprite.Sprite):
         self._created = obj['created']
         self._angle = obj['angle']
         self.speed = obj['speed']
-        self._energy = obj['energy']
+        self.energy = obj['energy']
         self._energy_burn_rate = obj['energy_burn_rate']
         self.age = obj['age']
         self.gen = obj['gen']
