@@ -186,7 +186,10 @@ class Character(pygame.sprite.Sprite):
         self.prev_y = None # temporary while I sort out collisions
         self._created = 0.0 # age of world
 
-        self._angle = math.pi / 2.0 # radians clockwise from north
+        self.vision_start = (0, 0)
+        self.vision_end = (0, 0)
+
+        self.angle = math.pi / 2.0 # radians clockwise from north
         self.speed = 0.0 # m/tick
         self.spawn = 0.0
 
@@ -267,12 +270,14 @@ class Character(pygame.sprite.Sprite):
             pygame.draw.circle(self.image, (0, 0, 0), r_r, self.r + 2, 0)
         pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
         eye_pos = list(r_r)
-        eye_pos[0] += int((self.r - 5) * math.sin(self._angle))
-        eye_pos[1] -= int((self.r - 5) * math.cos(self._angle))
+        eye_pos[0] += int((self.r - 5) * math.sin(self.angle))
+        eye_pos[1] -= int((self.r - 5) * math.cos(self.angle))
         pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
 
         if self.world.active_item is self:
             self._draw_border((0, 0, 255, 255))
+
+        pygame.draw.line(self.world.canvas, (0,0,0), self.vision_start, self.vision_end)
 
     def die(self):
         self.world.allcharacters.remove(self)
@@ -293,14 +298,21 @@ class Character(pygame.sprite.Sprite):
                 except KeyError:
                     pass
 
-        # energy and age:
+        # vision line
+        vr = 50
+        angle = self.angle
+        self.vision_start = (self._x + self.r + 2, self._y + self.r + 2)
+        self.vision_end = (self.vision_start[0] + (vr * math.sin(angle)),
+                           self.vision_start[1] - (vr * math.cos(angle)))
+
+        # age:
         self.age += 1
 
         # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
             1,
             self.haptic,
-            self.energy / 1000,
+            self.energy / 10000,
         )
         outputs = self.brain.process(*inputs)
         (
@@ -309,10 +321,9 @@ class Character(pygame.sprite.Sprite):
             self.spawn,
         ) = outputs
         # compensate values from NN
-        Fmove *= 3
         angle_change /= 2
 
-        self.energy -= abs(Fmove) + 10
+        self.energy -= abs(Fmove * 5) + 10
         if self.energy <= 0:
             self.die()
             return
@@ -346,9 +357,9 @@ class Character(pygame.sprite.Sprite):
         self.prev_x, self.prev_y = self._x, self._y
         self.speed += acceleration
         ddist = self.speed
-        self._angle = (self._angle + angle_change) % (2 * math.pi)
-        x = self._x + ddist * math.sin(self._angle)
-        y = self._y - ddist * math.cos(self._angle)
+        self.angle = (self.angle + angle_change) % (2 * math.pi)
+        x = self._x + ddist * math.sin(self.angle)
+        y = self._y - ddist * math.cos(self.angle)
         self.x = min(max(0, x), world.canvas_w - self.r)
         self.y = min(max(0, y), world.canvas_h - self.r)
         collided = []
@@ -389,7 +400,7 @@ class Character(pygame.sprite.Sprite):
             "generation: %d" % self.gen,
             "energy: %.2fJ" % self.energy,
             "r: %dm" % self.r,
-            "angle: %.2f radians" % self._angle,
+            "angle: %.2f radians" % self.angle,
             "speed: %.2fm/t" % self.speed,
             "x: %dm E" % self._x,
             "y: %dm S" % self._y,
@@ -401,7 +412,7 @@ class Character(pygame.sprite.Sprite):
             'x': self.x,
             'y': self.y,
             'created': self._created,
-            'angle': self._angle,
+            'angle': self.angle,
             'speed': self.speed,
             'energy': self.energy,
             'energy_burn_rate': self._energy_burn_rate,
@@ -418,7 +429,7 @@ class Character(pygame.sprite.Sprite):
         self._x = obj['x']
         self._y = obj['y']
         self._created = obj['created']
-        self._angle = obj['angle']
+        self.angle = obj['angle']
         self.speed = obj['speed']
         self.energy = obj['energy']
         self._energy_burn_rate = obj['energy_burn_rate']
