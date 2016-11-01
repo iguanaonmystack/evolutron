@@ -9,10 +9,15 @@ class Food(pygame.sprite.Sprite):
         self.tile = tile
         self.energy = 1000
 
-        self.image = pygame.Surface((9, 5), SRCALPHA).convert_alpha()
+        w = 9
+        h = 5
+        self.image = pygame.Surface((w, h), SRCALPHA).convert_alpha()
         self.rect = self.image.get_rect()
         self.rect.x = tile.rect.x + x
         self.rect.y = tile.rect.y + y
+        self.intersect_lines = [
+            ((self.rect.x, self.rect.y), (self.rect.x + w, self.rect.y + h)),
+        ]
         self.redraw = True
 
     def eaten(self):

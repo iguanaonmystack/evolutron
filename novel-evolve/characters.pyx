@@ -23,6 +23,19 @@ def identity(x):
 def cube(x):
     return x**3
 
+
+# Line collision algorithm. Ref: https://stackoverflow.com/a/9997374 and 
+# http://www.bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
+cdef _ccw(A, B, C):
+    return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+
+cdef intersect(A,B,C,D):
+    """Returns true if line segments AB and CD intersect"""
+    return _ccw(A,C,D) != _ccw(B,C,D) and _ccw(A,B,C) != _ccw(A,B,D)
+
+
+# Main classes:
+
 class Neuron(pygame.sprite.Sprite):
 
     def __init__(self, input_weights, initial_value=None, fn=sigmoid):
@@ -167,7 +180,7 @@ if use_numpy:
     Brain = NumpyBrain
 
 class Character(pygame.sprite.Sprite):
-    brain_inputs = 3
+    brain_inputs = 4
     brain_outputs = 3
     def __init__(self, world, radius):
         super(Character, self).__init__()
@@ -188,6 +201,7 @@ class Character(pygame.sprite.Sprite):
 
         self.vision_start = (0, 0)
         self.vision_end = (0, 0)
+        self.vision = 0 # Whether creature can see something
 
         self.angle = math.pi / 2.0 # radians clockwise from north
         self.speed = 0.0 # m/tick
@@ -272,7 +286,7 @@ class Character(pygame.sprite.Sprite):
         eye_pos = list(r_r)
         eye_pos[0] += int((self.r - 5) * math.sin(self.angle))
         eye_pos[1] -= int((self.r - 5) * math.cos(self.angle))
-        pygame.draw.circle(self.image, (0, 0, 0), eye_pos, 3, 0)
+        pygame.draw.circle(self.image, (255 * self.vision, 0, 0), eye_pos, 3, 0)
 
         if self.world.active_item is self:
             self._draw_border((0, 0, 255, 255))
@@ -305,12 +319,37 @@ class Character(pygame.sprite.Sprite):
         self.vision_end = (self.vision_start[0] + (vr * math.sin(angle)),
                            self.vision_start[1] - (vr * math.cos(angle)))
 
+
         # age:
         self.age += 1
+
+        # interaction with nearby objects:
+        foods = []
+        cdef int vision = 0
+        for tile in check_tiles:
+            foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
+            if vision == 1:
+                continue
+            for food in tile.allfood:
+                for iline in food.intersect_lines:
+                    if intersect(self.vision_start, self.vision_end, iline[0], iline[1]):
+                        vision = 1
+            for tree in tile.alltrees:
+                for iline in tree.intersect_lines:
+                    if intersect(self.vision_start, self.vision_end, iline[0], iline[1]):
+                        vision = 1
+            # TODO - other creatures
+        self.vision = vision
+
+        # eating:
+        for food in foods:
+            self.energy += food.energy
+            food.eaten()
 
         # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
             1,
+            vision,
             self.haptic,
             self.energy / 10000,
         )
@@ -327,14 +366,6 @@ class Character(pygame.sprite.Sprite):
         if self.energy <= 0:
             self.die()
             return
-
-        # eating:
-        foods = []
-        for tile in check_tiles:
-            foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
-        for food in foods:
-            self.energy += food.energy
-            food.eaten()
 
         ## reproducing:
         #if self.spawn and self.energy > 3000:

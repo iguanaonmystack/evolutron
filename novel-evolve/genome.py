@@ -10,6 +10,7 @@ class Genome(object):
 
         # These are not part of the genome but used to speed up calculations
         self._inputs = inputs
+        assert self._inputs == 4
         self._outputs = outputs
 
 
@@ -49,6 +50,7 @@ class Genome(object):
             for j in range(self._inputs):
                 new.hidden0_weights.append(
                     self._mutate_single(self.hidden0_weights[offset + j], rate))
+            offset = self._outputs * i
             for j in range(self._outputs):
                 new.output_weights.append(
                     self._mutate_single(self.output_weights[offset + j], rate))
@@ -77,16 +79,20 @@ class Genome(object):
         if p1.hidden_neurons > p2.hidden_neurons:
             p1, p2 = p2, p1
 
+        assert p1._inputs == 4
+        assert p2._inputs == 4
+        assert new._inputs == 4
         for i in range(new.hidden_neurons):
             offset = new._inputs * i
             for j in range(new._inputs):
-                if i >= p1.hidden_neurons:
+                if offset >= p1.hidden_neurons:
                     parent = p2
                 else:
                     parent = p1 if random.random() < 0.5 else p2
                 new.hidden0_weights.append(parent.hidden0_weights[offset + j])
+            offset = new._outputs * i
             for j in range(new._outputs):
-                if i >= p1.hidden_neurons:
+                if offset >= p1.hidden_neurons:
                     parent = p2
                 else:
                     parent = p1 if random.random() < 0.5 else p2

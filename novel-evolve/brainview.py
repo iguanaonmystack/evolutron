@@ -48,7 +48,7 @@ class BrainView(viewport.Viewport):
             self.image.blit(self.canvas, self.drag_offset)
             return
 
-        input_labels = ('const', 'haptic', 'energy/k')
+        input_labels = ('const', 'vision', 'haptic', 'energy/k')
         hidden_labels = ()
         output_labels = ('angle ch', 'impulse', 'spawn')
 

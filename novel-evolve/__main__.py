@@ -37,6 +37,7 @@ def main():
     if args.screenshot:
         os.environ['SDL_VIDEODRIVER'] = 'dummy'
     pygame.init()
+    pygame.mixer.quit() # Pygame's sound causes static on my computer.
 
     if args.inspect:
         import inspectmain
