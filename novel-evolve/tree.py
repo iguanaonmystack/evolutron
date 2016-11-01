@@ -8,13 +8,16 @@ class Tree(pygame.sprite.Sprite):
 
         self.tile = tile
         self.r = r
-
-        self.image = pygame.Surface(
-            (self.r * 2 + 4, self.r * 2 + 4), SRCALPHA).convert_alpha()
+        
+        rr = r + r
+        self.image = pygame.Surface((rr + 4, rr + 4), SRCALPHA).convert_alpha()
         self.rect = self.image.get_rect()
-        self.rect.x = tile.rect.x + x - self.r
-        self.rect.y = tile.rect.y + y - self.r
+        self.rect.x = tile.rect.x + x - r
+        self.rect.y = tile.rect.y + y - r
         self.r_r = (r, r)
+        self.intersect_lines = [
+            ((self.rect.x, self.rect.y), (self.rect.x + rr, self.rect.y + rr)),
+        ]
         self.redraw = True
 
     def draw(self):
