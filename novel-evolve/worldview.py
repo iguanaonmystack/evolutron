@@ -31,8 +31,7 @@ class WorldView(viewport.Viewport):
             for j, tile in enumerate(row):
 
                 block = tiles.TileView(
-                    self, i, j, self.tile_w, self.tile_h, tile,
-                    fertility=random.random())
+                    self, i, j, self.tile_w, self.tile_h, tile)
                 self.alltiles.add(block)
                 self.alltiles_coords[i, j] = block
 
