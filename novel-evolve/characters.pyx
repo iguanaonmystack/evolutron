@@ -26,12 +26,57 @@ def cube(x):
 
 # Line collision algorithm. Ref: https://stackoverflow.com/a/9997374 and 
 # http://www.bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
-cdef _ccw(A, B, C):
-    return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+cdef bint _ccw(int A_x, int A_y, int B_x, int B_y, int C_x, int C_y):
+    return (C_y-A_y) * (B_x-A_x) > (B_y-A_y) * (C_x-A_x)
 
-cdef intersect(A,B,C,D):
+cdef bint intersect(int A_x, int A_y,
+                    int B_x, int B_y,
+                    int C_x, int C_y,
+                    int D_x, int D_y):
     """Returns true if line segments AB and CD intersect"""
-    return _ccw(A,C,D) != _ccw(B,C,D) and _ccw(A,B,C) != _ccw(A,B,D)
+    return (
+        _ccw(A_x, A_y, C_x, C_y, D_x, D_y) != _ccw(B_x, B_y, C_x, C_y, D_x, D_y)
+    ) and (
+        _ccw(A_x, A_y, B_x, B_y, C_x, C_y) != _ccw(A_x, A_y, B_x, B_y, D_x, D_y)
+    )
+
+# Point-in-triangle algorithm. Ref: https://stackoverflow.com/a/2049593
+cdef int _sign(int p1_x, int p1_y, int p2_x, int p2_y, int p3_x, int p3_y):
+    return (p1_x - p3_x) * (p2_y - p3_y) - (p2_x - p3_x) * (p1_y - p3_y);
+
+cdef bint point_in_triangle(int pt_x, int pt_y,
+                            int v1_x, int v1_y,
+                            int v2_x, int v2_y,
+                            int v3_x, int v3_y):
+    cdef bint b1, b2, b3
+    b1 = _sign(pt_x, pt_y, v1_x, v1_y, v2_x, v2_y) < 0
+    b2 = _sign(pt_x, pt_y, v2_x, v2_y, v3_x, v3_y) < 0
+    b3 = _sign(pt_x, pt_y, v3_x, v3_y, v1_x, v1_y) < 0
+    return (b1 == b2) and (b2 == b3)
+
+
+
+cdef bint line_in_triangle(int La_x, int La_y,
+                           int Lb_x, int Lb_y,
+                           int Ta_x, int Ta_y,
+                           int Tb_x, int Tb_y,
+                           int Tc_x, int Tc_y):
+    """Returns true if Line La->Lb intersects or contained by triangle Ta-Tb-Tc"""
+    # if either end of the line segment are inside the triangle, return True:
+    if point_in_triangle(La_x, La_y, Ta_x, Ta_y, Tb_x, Tb_y, Tc_x, Tc_y):
+        return True
+    if point_in_triangle(Lb_x, Lb_y, Ta_x, Ta_y, Tb_x, Tb_y, Tc_x, Tc_y):
+        return True
+
+    # if line segment intersects either Ta-Tb or Ta-Tc, return True:
+    # (don't need to check Tb-Tc since any line that intersects it
+    #  will also intersect Ta-Tb or Ta-Tc)
+    if intersect(La_x, La_y, Lb_x, Lb_y, Ta_x, Ta_y, Tb_x, Tb_y):
+        return True
+    if intersect(La_x, La_y, Lb_x, Lb_y, Ta_x, Ta_y, Tc_x, Tc_y):
+        return True
+
+    return False
 
 
 # Main classes:
@@ -199,9 +244,8 @@ class Character(pygame.sprite.Sprite):
         self.prev_y = None # temporary while I sort out collisions
         self._created = 0.0 # age of world
 
-        self.vision_start = (0, 0)
-        self.vision_end = (0, 0)
         self.vision = 0 # Whether creature can see something
+        self.seen_thing = None
 
         self.angle = math.pi / 2.0 # radians clockwise from north
         self.speed = 0.0 # m/tick
@@ -291,7 +335,8 @@ class Character(pygame.sprite.Sprite):
         if self.world.active_item is self:
             self._draw_border((0, 0, 255, 255))
 
-        pygame.draw.line(self.world.canvas, (0,0,0), self.vision_start, self.vision_end)
+        #pygame.draw.line(self.world.canvas, (0,0,0), self.vision_start, self.vision_left_end)
+        #pygame.draw.line(self.world.canvas, (0,0,0), self.vision_start, self.vision_right_end)
 
     def die(self):
         self.world.allcharacters.remove(self)
@@ -299,6 +344,10 @@ class Character(pygame.sprite.Sprite):
             self.world.active_item = None
 
     def update(self):
+        cdef int vision_start_x, vision_start_y
+        cdef int vision_left_end_x, vision_left_end_y
+        cdef int vision_right_end_x, vision_right_end_y
+
         world = self.world
 
         # observing world
@@ -312,34 +361,53 @@ class Character(pygame.sprite.Sprite):
                 except KeyError:
                     pass
 
-        # vision line
+        # vision triangle
         vr = 50
         angle = self.angle
-        self.vision_start = (self._x + self.r + 2, self._y + self.r + 2)
-        self.vision_end = (self.vision_start[0] + (vr * math.sin(angle)),
-                           self.vision_start[1] - (vr * math.cos(angle)))
-
+        vision_start_x = self._x + self.r + 2
+        vision_start_y = self._y + self.r + 2
+        vision_left_end_x = vision_start_x + (vr * math.sin(angle - 0.3))
+        vision_left_end_y = vision_start_y - (vr * math.cos(angle - 0.3))
+        vision_right_end_x = vision_start_x + (vr * math.sin(angle + 0.3))
+        vision_right_end_y = vision_start_y - (vr * math.cos(angle + 0.3))
+        #self.vision_start = vision_start_x, vision_start_y
+        #self.vision_left_end = vision_left_end_x, vision_left_end_y
+        #self.vision_right_end = vision_right_end_x, vision_right_end_y
 
         # age:
         self.age += 1
 
         # interaction with nearby objects:
+        seen_thing = None
         foods = []
         cdef int vision = 0
         for tile in check_tiles:
             foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
-            if vision == 1:
-                continue
             for food in tile.allfood:
                 for iline in food.intersect_lines:
-                    if intersect(self.vision_start, self.vision_end, iline[0], iline[1]):
+                    if line_in_triangle(iline[0][0], iline[0][1],
+                                        iline[1][0], iline[1][1],
+                                        vision_start_x, vision_start_y,
+                                        vision_left_end_x, vision_left_end_y,
+                                        vision_right_end_x, vision_right_end_y):
                         vision = 1
+                        seen_thing = food
+            if vision == 1:
+                continue
             for tree in tile.alltrees:
                 for iline in tree.intersect_lines:
-                    if intersect(self.vision_start, self.vision_end, iline[0], iline[1]):
+                    if line_in_triangle(iline[0][0], iline[0][1],
+                                        iline[1][0], iline[1][1],
+                                        vision_start_x, vision_start_y,
+                                        vision_left_end_x, vision_left_end_y,
+                                        vision_right_end_x, vision_right_end_y):
+                        seen_thing = tree
                         vision = 1
+            if vision == 1:
+                continue
             # TODO - other creatures
         self.vision = vision
+        self.seen_thing = seen_thing
 
         # eating:
         for food in foods:
@@ -435,6 +503,7 @@ class Character(pygame.sprite.Sprite):
             "speed: %.2fm/t" % self.speed,
             "x: %dm E" % self._x,
             "y: %dm S" % self._y,
+            "vision: %s" % self.seen_thing,
         ])
 
     def dump(self):
