@@ -25,6 +25,11 @@ class Tree(pygame.sprite.Sprite):
             return
         self.redraw = False
         r_r = self.r_r
-        pygame.draw.circle(self.image, (0, 80, 0), r_r, self.r, 0)
+        if self.tile.world.active_item is self:
+            pygame.draw.circle(self.image, (0, 0, 255), r_r, self.r, 0)
+        else:
+            pygame.draw.circle(self.image, (0, 80, 0), r_r, self.r, 0)
         pygame.draw.circle(self.image, (0, 128, 0), r_r, self.r - 2, 0)
 
+    def __str__(self):
+        return "Tree at {},{}".format(self.rect.x, self.rect.y)
