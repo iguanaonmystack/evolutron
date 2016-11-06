@@ -79,7 +79,7 @@ def main():
         last_t = t
         t = time.perf_counter()
         time_passed = t - last_t
-        print('sleeping', tickrate - time_passed)
+        #print('sleeping', tickrate - time_passed)
         time.sleep(max(0, tickrate - time_passed))
         
         if not pause:
