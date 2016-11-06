@@ -8,7 +8,7 @@ import food
 import tree
 
 class TileView(pygame.sprite.Sprite):
-    def __init__(self, world, x, y, w, h, tile, fertility=1.0):
+    def __init__(self, world, x, y, w, h, tile):
         pygame.sprite.Sprite.__init__(self)
         self.world = world
         self.x = x
@@ -16,32 +16,24 @@ class TileView(pygame.sprite.Sprite):
         self.w = w
         self.h = h
         self.tile = tile
-        self.fertility_mult = 1.0
-        self.r_mult = 255
-        self.g_mult = 0
-        self.b_mult = 0
+        self.max_food = 10
+        self.fertility_mult = 0.5
+        self.colour = (255, 0, 0)
         if self.tile.terrain == 'meadow':
-            self.fertility_mult = 0.005
-            self.r_mult = 120
-            self.g_mult = 180
-            self.b_mult = 120
+            self.fertility_mult = 0.0025
+            self.colour = (80, 180, 80)
+            self.max_food = 5
         elif self.tile.terrain == 'lake':
             self.fertility_mult = 0
-            self.r_mult = 0
-            self.g_mult = 0
-            self.b_mult = 215
+            self.colour = (0, 0, 215)
+            self.max_food = 0
         elif self.tile.terrain == 'forest':
-            self.fertility_mult = 0.010
-            self.r_mult = 0
-            self.g_mult = 215
-            self.b_mult = 0
+            self.fertility_mult = 0.005
+            self.colour = (0, 120, 0)
+            self.max_food = 10
         else:
             print('unknown terrain type: %r' % self.tile)
 
-        if fertility > 1.0:
-            raise ValueError('fertility must be <= 1.0')
-        self.fertility = fertility
-        
         self.image = pygame.Surface((self.w, self.h)).convert()
         self.image.fill((0,0,255))
         self.redraw = True
@@ -53,7 +45,6 @@ class TileView(pygame.sprite.Sprite):
 
         self.alltrees = group.Group()
         self.allfood = group.Group()
-        self.max_food = 10
 
         if tile.terrain == 'forest':
             t = tree.Tree(
@@ -68,7 +59,7 @@ class TileView(pygame.sprite.Sprite):
     def update(self):
         # create some food
         if len(self.allfood) < self.max_food:
-            if random.random() < (self.fertility * self.fertility_mult):
+            if random.random() < self.fertility_mult:
                 f = food.Food(
                     self, random.randint(0, self.w), random.randint(0, self.h))
                 self.allfood.add(f)
@@ -79,11 +70,7 @@ class TileView(pygame.sprite.Sprite):
             return
         self.redraw = False
 
-        new_fill = (int(self.fertility * self.r_mult + 40),
-                    int(self.fertility * self.g_mult + 40),
-                    int(self.fertility * self.b_mult + 40))
-        self.last_fill = new_fill
-        self.image.fill(new_fill)
+        self.image.fill(self.colour)
         if self.world.active_item is self:
             pygame.draw.lines(self.image, (0, 0, 255), 1, [
                 (0, 0), (self.w - 1, 0), (self.w - 1, self.h - 1), (0, self.h - 1)
@@ -93,7 +80,6 @@ class TileView(pygame.sprite.Sprite):
     def __str__(self):
         return '\n'.join([
             'Tile:',
-            'terrain: %s' % self.tile.terrain.__class__.__name__,
-            'fertility: %s' % self.fertility,
+            'terrain: %s' % self.tile.terrain,
         ])
 
