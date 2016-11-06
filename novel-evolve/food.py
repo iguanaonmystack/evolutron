@@ -9,8 +9,8 @@ class Food(pygame.sprite.Sprite):
         self.tile = tile
         self.energy = 1000
 
-        w = 9
-        h = 5
+        w = self.w = 9
+        h = self.h = 5
         self.image = pygame.Surface((w, h), SRCALPHA).convert_alpha()
         self.rect = self.image.get_rect()
         self.rect.x = tile.rect.x + x
@@ -28,5 +28,12 @@ class Food(pygame.sprite.Sprite):
         if self.redraw:
             pygame.draw.ellipse(self.image, (96, 96, 0), Rect(3, 2, 3, 3), 0)
             pygame.draw.ellipse(self.image, (128, 128, 0), Rect(0, 0, 9, 5), 0)
+            if self.tile.world.active_item is self:
+                pygame.draw.lines(self.image, (0, 0, 255), 1, [
+                    (0, 0), (self.w - 1, 0), (self.w - 1, self.h - 1), (0, self.h - 1)
+                ], 3)
             self.redraw = False
+
+    def __str__(self):
+        return "Food at {},{}".format(self.rect.x, self.rect.y)
 
