@@ -33,3 +33,6 @@ class Tree(pygame.sprite.Sprite):
 
     def __str__(self):
         return "Tree at {},{}".format(self.rect.x, self.rect.y)
+
+    def __repr__(self):
+        return "<Tree at {},{}>".format(self.rect.x, self.rect.y)

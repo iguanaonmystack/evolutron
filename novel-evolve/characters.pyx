@@ -243,6 +243,7 @@ class Character(pygame.sprite.Sprite):
         self.prev_x = None # 
         self.prev_y = None # temporary while I sort out collisions
         self._created = 0.0 # age of world
+        self.tile = None # set in update()
 
         self.vision = 0 # Whether creature can see something
         self.seen_thing = None
@@ -256,6 +257,7 @@ class Character(pygame.sprite.Sprite):
         self.age = 0 # ticks
         self.gen = 0
         self.parents = 0
+        self.children = 0
 
         self.brain = None
 
@@ -264,6 +266,13 @@ class Character(pygame.sprite.Sprite):
             self._created = world.age
             self.image = pygame.Surface((self.r * 2 + 4, self.r * 2 + 4), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
+
+    @property
+    def intersect_lines(self):
+        d = self.r * 2
+        return [
+            ((self.rect.x, self.rect.y), (self.rect.x + d, self.rect.y + d)),
+        ]
 
     @classmethod
     def from_random(cls, world):
@@ -322,8 +331,10 @@ class Character(pygame.sprite.Sprite):
 
         r_r = (self.r + 2, self.r + 2)
         liveness = int(min(1.0, (self.energy / 6000.) + 0.5) * 255)
-        if self.parents == 0:
+        if self.parents == 1:
             pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r + 2, 0)
+        elif self.parents == 0:
+            pygame.draw.circle(self.image, (128, 128, 128), r_r, self.r + 2, 0)
         else:
             pygame.draw.circle(self.image, (0, 0, 0), r_r, self.r + 2, 0)
         pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
@@ -342,6 +353,8 @@ class Character(pygame.sprite.Sprite):
         self.world.allcharacters.remove(self)
         if self.world.active_item is self:
             self.world.active_item = None
+        if self.tile:
+            self.tile.allcharacters.remove(self)
 
     def update(self):
         cdef int vision_start_x, vision_start_y
@@ -352,6 +365,16 @@ class Character(pygame.sprite.Sprite):
 
         # observing world
         tile_coord = self._x // world.tile_w, self._y // world.tile_h 
+        try:
+            tile = world.alltiles_coords[tile_coord]
+        except KeyError:
+            tile = None
+        if tile is not None and tile is not self.tile:
+            # tile changed
+            oldtile = self.tile
+            oldtile and oldtile.allcharacters.remove(self)
+            tile.allcharacters.add(self)
+            self.tile = tile
         check_tiles = []
         for i in range(-1, 2):
             for j in range(-1, 2):
@@ -383,29 +406,23 @@ class Character(pygame.sprite.Sprite):
         cdef int vision = 0
         for tile in check_tiles:
             foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
-            for food in tile.allfood:
-                for iline in food.intersect_lines:
-                    if line_in_triangle(iline[0][0], iline[0][1],
-                                        iline[1][0], iline[1][1],
-                                        vision_start_x, vision_start_y,
-                                        vision_left_end_x, vision_left_end_y,
-                                        vision_right_end_x, vision_right_end_y):
-                        vision = 1
-                        seen_thing = food
-            if vision == 1:
-                continue
-            for tree in tile.alltrees:
-                for iline in tree.intersect_lines:
-                    if line_in_triangle(iline[0][0], iline[0][1],
-                                        iline[1][0], iline[1][1],
-                                        vision_start_x, vision_start_y,
-                                        vision_left_end_x, vision_left_end_y,
-                                        vision_right_end_x, vision_right_end_y):
-                        seen_thing = tree
-                        vision = 1
-            if vision == 1:
-                continue
-            # TODO - other creatures
+            for group in tile.allfood, tile.alltrees, tile.allcharacters:
+                for item in group.spritedict:
+                    if item is self:
+                        continue
+                    for iline in item.intersect_lines:
+                        if line_in_triangle(iline[0][0], iline[0][1],
+                                            iline[1][0], iline[1][1],
+                                            vision_start_x, vision_start_y,
+                                            vision_left_end_x, vision_left_end_y,
+                                            vision_right_end_x, vision_right_end_y):
+                            vision = 1
+                            seen_thing = item
+                            break
+                    if vision == 1:
+                        break
+                if vision == 1:
+                    continue
         self.vision = vision
         self.seen_thing = seen_thing
 
@@ -435,20 +452,22 @@ class Character(pygame.sprite.Sprite):
             self.die()
             return
 
-        ## reproducing:
-        #if self.spawn and self.energy > 3000:
-        #    self.energy -= 3000
-        #    newgenome = self.genome.mutate()
-        #    newchar = self.__class__.from_genome(world, newgenome)
-        #    newchar.x = self._x
-        #    newchar.y = self._y
-        #    newchar.gen = self.gen + 1
-        #    op = operator.sub
-        #    while pygame.sprite.spritecollideany(newchar, world.allcharacters):
-        #        newchar.x = op(newchar.x, 1)
-        #        if newchar.x < 1:
-        #            op = operator.add
-        #    world.allcharacters.add(newchar)
+        # asexual reproduction:
+        if self.spawn > 0.5 and self.energy > 6000:
+            self.energy -= 6000
+            newgenome = self.genome.mutate()
+            newchar = self.__class__.from_genome(world, newgenome)
+            newchar.x = self._x
+            newchar.y = self._y
+            newchar.gen = self.gen + 1
+            newchar.parents = 1
+            self.children += 1
+            op = operator.sub
+            while pygame.sprite.spritecollideany(newchar, world.allcharacters):
+                newchar.x = op(newchar.x, 1)
+                if newchar.x < 1:
+                    op = operator.add
+            world.allcharacters.add(newchar)
 
         # movement:
         Ffriction = self.speed / 4
@@ -491,6 +510,9 @@ class Character(pygame.sprite.Sprite):
         self._y = value
         self.rect.y = value
 
+    def __repr__(self):
+        return '<Char at {},{}>'.format(int(self._x), int(self._y))
+
     def __str__(self):
         return '\n'.join([
             "Character:",
@@ -501,9 +523,10 @@ class Character(pygame.sprite.Sprite):
             "r: %dm" % self.r,
             "angle: %.2f radians" % self.angle,
             "speed: %.2fm/t" % self.speed,
+            "vision: %r" % self.seen_thing,
+            "children: %s" % self.children,
             "x: %dm E" % self._x,
             "y: %dm S" % self._y,
-            "vision: %s" % self.seen_thing,
         ])
 
     def dump(self):

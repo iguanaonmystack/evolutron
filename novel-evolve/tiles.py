@@ -45,6 +45,7 @@ class TileView(pygame.sprite.Sprite):
 
         self.alltrees = group.Group()
         self.allfood = group.Group()
+        self.allcharacters = group.Group()
 
         if tile.terrain == 'forest':
             t = tree.Tree(
