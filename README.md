@@ -22,11 +22,14 @@ Running the simulator
 This is still a work in progress and this may change, but roughly:
 
 ```bash
-$ pip install pygame # or apt-get install python-pygame on Debian-based distros
-$ git clone https://github.com/flexo/novel-evolve.git
+$ pip install pygame
+$ pip install cython
+$ git clone https://github.com/flexo/evolutron.git
 $ cd novel-evolve
 $ python novel-evolve
 ```
+
+You will need Python 3.3 or higher. Sometimes this means the pip command will be called 'pip3' and the python command will be called 'python3'.
 
 License
 -------
