@@ -34,6 +34,7 @@ class Group(pygame_Group):
                 other.speed = 0
                 other.haptic = 1
 
+                # sexual reproduction:
                 if sprite.spawn > 0 and other.spawn > 0 \
                 and sprite.energy > 3000 and other.energy > 3000:
                     sprite.energy -= 3000
@@ -44,6 +45,8 @@ class Group(pygame_Group):
                     newchar.y = sprite._y + other._y // 2
                     newchar.gen = max(sprite.gen, other.gen) + 1
                     newchar.parents = 2
+                    sprite.children += 1
+                    other.children += 1
                     op = operator.sub
                     while spritecollideany(newchar, world.allcharacters):
                         newchar.x = op(newchar.x, 1)

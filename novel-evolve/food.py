@@ -37,3 +37,5 @@ class Food(pygame.sprite.Sprite):
     def __str__(self):
         return "Food at {},{}".format(self.rect.x, self.rect.y)
 
+    def __repr__(self):
+        return "<Food at {},{}>".format(self.rect.x, self.rect.y)
