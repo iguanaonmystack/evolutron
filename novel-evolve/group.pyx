@@ -41,15 +41,21 @@ class Group(pygame_Group):
                     other.energy -= 3000
                     newgenome = Genome.from_parents(sprite.genome, other.genome)
                     newchar = Character.from_genome(world, newgenome)
-                    newchar.x = sprite._x + other._x // 2
-                    newchar.y = sprite._y + other._y // 2
+                    x = sprite.x + other.x // 2
+                    y = sprite.y + other.y // 2
+                    newchar.x = x
+                    newchar.rect.x = x
+                    newchar.y = y
+                    newchar.rect.y = y
                     newchar.gen = max(sprite.gen, other.gen) + 1
                     newchar.parents = 2
                     sprite.children += 1
                     other.children += 1
                     op = operator.sub
                     while spritecollideany(newchar, world.allcharacters):
-                        newchar.x = op(newchar.x, 1)
+                        x = op(newchar.x, 1)
+                        newchar.x = x
+                        newchar.rect.x = x
                         if newchar.x < 1:
                             op = operator.add
                     world.allcharacters.add(newchar)

@@ -41,11 +41,15 @@ class WorldView(viewport.Viewport):
 
     def _create_character(self):
         character = characters.Character.from_random(self)
-        while character._x is None \
+        while character.x == -1 \
         or pygame.sprite.spritecollideany(character, self.allcharacters) \
         or pygame.sprite.spritecollideany(character, self.alltrees):
-            character.x = random.randint(0, self.canvas_w - character.r * 2)
-            character.y = random.randint(0, self.canvas_h - character.r * 2)
+            x = random.randint(0, self.canvas_w - character.r * 2)
+            y = random.randint(0, self.canvas_h - character.r * 2)
+            character.x = x
+            character.rect.x = x
+            character.y = y
+            character.rect.y = y
         self.allcharacters.add(character)
         # debugging:
         if self.active_item is None:

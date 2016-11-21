@@ -10,7 +10,6 @@ class Genome(object):
 
         # These are not part of the genome but used to speed up calculations
         self._inputs = inputs
-        assert self._inputs == 4
         self._outputs = outputs
 
 
@@ -81,9 +80,9 @@ class Genome(object):
         if p1.hidden_neurons > p2.hidden_neurons:
             p1, p2 = p2, p1
 
-        assert p1._inputs == 4
-        assert p2._inputs == 4
-        assert new._inputs == 4
+        assert p1._inputs == 5
+        assert p2._inputs == 5
+        assert new._inputs == 5
         for i in range(new.hidden_neurons):
             offset = new._inputs * i
             for j in range(new._inputs):
