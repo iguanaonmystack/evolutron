@@ -200,36 +200,79 @@ class Brain(object):
         return self
 
 
-class Character(pygame.sprite.Sprite):
-    brain_inputs = 4
+cdef class Character:
+    cdef public object world
+    cdef public object genome
+
+    cdef public int haptic
+    cdef public int vision_left
+    cdef public int vision_right
+    cdef public object seen_thing
+    cdef tuple _vision_start
+    cdef tuple _vision_left_end
+    cdef tuple _vision_middle_end
+    cdef tuple _vision_right_end
+
+    cdef public int r
+    cdef public int x
+    cdef public int y
+    cdef public int prev_x
+    cdef public int prev_y
+    cdef public int created
+    cdef public object tile
+
+    cdef public double angle
+    cdef public double speed
+    cdef public double spawn
+
+    cdef public int energy
+    cdef public int age
+    cdef public int gen
+    cdef public int parents
+    cdef public int children
+
+    cdef public object brain
+
+    cdef public object image
+    cdef public object rect
+    cdef public bint redraw
+
+    brain_inputs = 5
     brain_outputs = 3
+
+    # pygame compatibility (since we can't inherit Sprite from this cdef class)
+    cdef object __g
+
     def __init__(self, world, radius):
-        super(Character, self).__init__()
+        self.__g = {} # The groups the sprite is in
 
         self.world = world
         self.genome = None
 
         # Senses
         self.haptic = 0 # touching anything
+        self.vision_left = 0 # Whether creature can see something
+        self.vision_right = 0
+        self.seen_thing = None
+        self._vision_start = (0,0)
+        self._vision_left_end = (0,0)
+        self._vision_middle_end = (0,0)
+        self._vision_right_end = (0,0)
 
         # Physical properties
         self.r = radius   # radius, m
-        self._x = None # x coord, m
-        self._y = None # y coord, m
-        self.prev_x = None # 
-        self.prev_y = None # temporary while I sort out collisions
-        self._created = 0.0 # age of world
+        self.x = -1 # x coord, m
+        self.y = -1 # y coord, m
+        self.prev_x = -1 # 
+        self.prev_y = -1 # temporary while I sort out collisions
+        self.created = 0 # age of world
         self.tile = None # set in update()
 
-        self.vision = 0 # Whether creature can see something
-        self.seen_thing = None
-
-        self.angle = math.pi / 2.0 # radians clockwise from north
+        self.angle = 0.0 # radians clockwise from north
         self.speed = 0.0 # m/tick
         self.spawn = 0.0
 
         self.energy = 2000 # J
-        self._energy_burn_rate = 10 # J/tick
         self.age = 0 # ticks
         self.gen = 0
         self.parents = 0
@@ -239,9 +282,10 @@ class Character(pygame.sprite.Sprite):
 
         # Drawing
         if world:
-            self._created = world.age
+            self.created = world.age
             self.image = pygame.Surface((self.r * 2 + 4, self.r * 2 + 4), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
+            self.redraw = True # ignored in Character
 
     @property
     def intersect_lines(self):
@@ -299,8 +343,8 @@ class Character(pygame.sprite.Sprite):
         ], 3)
 
     def draw(self):
-        self.rect.x = self._x
-        self.rect.y = self._y
+        self.rect.x = self.x
+        self.rect.y = self.y
 
         if self.world.active_item is not self:
             self._draw_border((0, 0, 0, 0))
@@ -317,13 +361,19 @@ class Character(pygame.sprite.Sprite):
         eye_pos = list(r_r)
         eye_pos[0] += int((self.r - 5) * math.sin(self.angle))
         eye_pos[1] -= int((self.r - 5) * math.cos(self.angle))
-        pygame.draw.circle(self.image, (255 * self.vision, 0, 0), eye_pos, 3, 0)
+        pygame.draw.circle(
+            self.image,
+            (255 * self.vision_left, 0, 255 * self.vision_right),
+            eye_pos,
+            3,
+            0)
 
         if self.world.active_item is self:
             self._draw_border((0, 0, 255, 255))
 
-        #pygame.draw.line(self.world.canvas, (0,0,0), self.vision_start, self.vision_left_end)
-        #pygame.draw.line(self.world.canvas, (0,0,0), self.vision_start, self.vision_right_end)
+        #pygame.draw.line(self.world.canvas, (0,0,0), self._vision_start, self._vision_left_end)
+        #pygame.draw.line(self.world.canvas, (0,0,0), self._vision_start, self._vision_middle_end)
+        #pygame.draw.line(self.world.canvas, (0,0,0), self._vision_start, self._vision_right_end)
 
     def die(self):
         self.world.allcharacters.remove(self)
@@ -335,12 +385,13 @@ class Character(pygame.sprite.Sprite):
     def update(self):
         cdef int vision_start_x, vision_start_y
         cdef int vision_left_end_x, vision_left_end_y
+        cdef int vision_middle_end_x, vision_middle_end_y
         cdef int vision_right_end_x, vision_right_end_y
 
         world = self.world
 
         # observing world
-        tile_coord = self._x // world.tile_w, self._y // world.tile_h 
+        tile_coord = self.x // world.tile_w, self.y // world.tile_h 
         try:
             tile = world.alltiles_coords[tile_coord]
         except KeyError:
@@ -363,15 +414,19 @@ class Character(pygame.sprite.Sprite):
         # vision triangle
         vr = 50
         angle = self.angle
-        vision_start_x = self._x + self.r + 2
-        vision_start_y = self._y + self.r + 2
+        vision_start_x = self.x + self.r + 2
+        vision_start_y = self.y + self.r + 2
         vision_left_end_x = vision_start_x + (vr * math.sin(angle - 0.3))
         vision_left_end_y = vision_start_y - (vr * math.cos(angle - 0.3))
+        vision_middle_end_x = vision_start_x + (vr * math.sin(angle))
+        vision_middle_end_y = vision_start_y - (vr * math.cos(angle))
         vision_right_end_x = vision_start_x + (vr * math.sin(angle + 0.3))
         vision_right_end_y = vision_start_y - (vr * math.cos(angle + 0.3))
-        #self.vision_start = vision_start_x, vision_start_y
-        #self.vision_left_end = vision_left_end_x, vision_left_end_y
-        #self.vision_right_end = vision_right_end_x, vision_right_end_y
+
+        #self._vision_start = vision_start_x, vision_start_y
+        #self._vision_left_end = vision_left_end_x, vision_left_end_y
+        #self._vision_middle_end = vision_middle_end_x, vision_middle_end_y
+        #self._vision_right_end = vision_right_end_x, vision_right_end_y
 
         # age:
         self.age += 1
@@ -379,7 +434,8 @@ class Character(pygame.sprite.Sprite):
         # interaction with nearby objects:
         seen_thing = None
         foods = []
-        cdef int vision = 0
+        cdef int vision_left = 0
+        cdef int vision_right = 0
         for tile in check_tiles:
             foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
             for group in tile.allfood, tile.alltrees, tile.allcharacters:
@@ -387,19 +443,28 @@ class Character(pygame.sprite.Sprite):
                     if item is self:
                         continue
                     for iline in item.intersect_lines:
-                        if line_in_triangle(iline[0][0], iline[0][1],
+                        if vision_left == 0 and line_in_triangle(iline[0][0], iline[0][1],
                                             iline[1][0], iline[1][1],
                                             vision_start_x, vision_start_y,
                                             vision_left_end_x, vision_left_end_y,
-                                            vision_right_end_x, vision_right_end_y):
-                            vision = 1
-                            seen_thing = item
+                                            vision_middle_end_x, vision_middle_end_y):
+                            vision_left = 1
+                            seen_thing_left = item
                             break
-                    if vision == 1:
+                        if vision_right == 0 and line_in_triangle(iline[0][0], iline[0][1],
+                                            iline[1][0], iline[1][1],
+                                            vision_start_x, vision_start_y,
+                                            vision_middle_end_x, vision_middle_end_y,
+                                            vision_right_end_x, vision_right_end_y):
+                            vision_right = 1
+                            seen_thing_right = item
+                            break
+                    if vision_left == 1 and vision_right == 1:
                         break
-                if vision == 1:
+                if vision_left == 1 and vision_right == 1:
                     continue
-        self.vision = vision
+        self.vision_left = vision_left
+        self.vision_right = vision_right
         self.seen_thing = seen_thing
 
         # eating:
@@ -410,7 +475,8 @@ class Character(pygame.sprite.Sprite):
         # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
             1,
-            vision,
+            vision_left,
+            vision_right,
             self.haptic,
             self.energy / 10000,
         )
@@ -433,14 +499,18 @@ class Character(pygame.sprite.Sprite):
             self.energy -= 6000
             newgenome = self.genome.mutate()
             newchar = self.__class__.from_genome(world, newgenome)
-            newchar.x = self._x
-            newchar.y = self._y
+            newchar.x = self.x
+            newchar.rect.x = self.rect.x
+            newchar.y = self.y
+            newchar.rect.y = self.rect.y
             newchar.gen = self.gen + 1
             newchar.parents = 1
             self.children += 1
             op = operator.sub
             while pygame.sprite.spritecollideany(newchar, world.allcharacters):
-                newchar.x = op(newchar.x, 1)
+                x = op(newchar.x, 1)
+                newchar.x = x
+                newchar.rect.x = x
                 if newchar.x < 1:
                     op = operator.add
             world.allcharacters.add(newchar)
@@ -448,12 +518,12 @@ class Character(pygame.sprite.Sprite):
         # movement:
         Ffriction = self.speed / 4
         acceleration = (Fmove - Ffriction) / (self.r)
-        self.prev_x, self.prev_y = self._x, self._y
+        self.prev_x, self.prev_y = self.x, self.y
         self.speed += acceleration
         ddist = self.speed
         self.angle = (self.angle + angle_change) % (2 * math.pi)
-        x = self._x + ddist * math.sin(self.angle)
-        y = self._y - ddist * math.cos(self.angle)
+        x = self.x + ddist * math.sin(self.angle)
+        y = self.y - ddist * math.cos(self.angle)
         self.x = min(max(0, x), world.canvas_w - self.r)
         self.y = min(max(0, y), world.canvas_h - self.r)
         collided = []
@@ -468,31 +538,14 @@ class Character(pygame.sprite.Sprite):
         else:
             self.haptic = 0 # may still be updated by Group.collisions()
 
-    @property
-    def x(self):
-        return self._x
-
-    @x.setter
-    def x(self, value):
-        self._x = value
-        self.rect.x = value
-
-    @property
-    def y(self):
-        return self._y
-
-    @y.setter
-    def y(self, value):
-        self._y = value
-        self.rect.y = value
 
     def __repr__(self):
-        return '<Char at {},{}>'.format(int(self._x), int(self._y))
+        return '<Char at {},{}>'.format(self.x, self.y)
 
     def __str__(self):
         return '\n'.join([
             "Character:",
-            "created at: %dt" % self._created,
+            "created at: %dt" % self.created,
             "age: %dt" % self.age,
             "generation: %d" % self.gen,
             "energy: %.2fJ" % self.energy,
@@ -501,8 +554,8 @@ class Character(pygame.sprite.Sprite):
             "speed: %.2fm/t" % self.speed,
             "vision: %r" % self.seen_thing,
             "children: %s" % self.children,
-            "x: %dm E" % self._x,
-            "y: %dm S" % self._y,
+            "x: %dm E" % self.x,
+            "y: %dm S" % self.y,
         ])
 
     def dump(self):
@@ -510,11 +563,10 @@ class Character(pygame.sprite.Sprite):
             'r': self.r,
             'x': self.x,
             'y': self.y,
-            'created': self._created,
+            'created': self.created,
             'angle': self.angle,
             'speed': self.speed,
             'energy': self.energy,
-            'energy_burn_rate': self._energy_burn_rate,
             'age': self.age,
             'gen': self.gen,
             'brain': self.brain.dump(),
@@ -525,16 +577,24 @@ class Character(pygame.sprite.Sprite):
     @classmethod
     def load(cls, obj):
         self = cls(None, obj['r'])
-        self._x = obj['x']
-        self._y = obj['y']
-        self._created = obj['created']
+        self.x = obj['x']
+        self.y = obj['y']
+        self.created = obj['created']
         self.angle = obj['angle']
         self.speed = obj['speed']
         self.energy = obj['energy']
-        self._energy_burn_rate = obj['energy_burn_rate']
         self.age = obj['age']
         self.gen = obj['gen']
         self.brain = Brain.load(obj['brain'])
         #self.genome = genome.Genome.load(obj['genome'])
         return self
+
+
+    # pygame comptibility:
+
+    def add_internal(self, group):
+        self.__g[group] = 0
+
+    def remove_internal(self, group):
+        del self.__g[group]
 

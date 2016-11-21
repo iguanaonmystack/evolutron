@@ -22,7 +22,7 @@ class GenePopView(viewport.Viewport):
         off = 0
         self.sorted_chars = sorted(
             self.parent.world.allcharacters,
-            key=operator.attrgetter('_created'))
+            key=operator.attrgetter('created'))
         xwidth = self.xwidth
         ywidth = self.ywidth
         for character in self.sorted_chars:
