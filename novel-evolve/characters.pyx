@@ -199,30 +199,6 @@ class Brain(object):
         self = cls(obj['input_weights'], obj['output_weights'])
         return self
 
-class NumpyBrain(object):
-    '''Alternative implementation of Brain, using numpy matrix multiplication.
-
-    API is identical but this one is oddly a lot slower than the Neuron-based
-    brain. Unexpected....
-    '''
-    def __init__(self, input_weights, output_weights):
-        self.input_weights = np.matrix(input_weights)
-        self.output_weights = np.matrix(output_weights)
-        self.sigmoid = np.vectorize(sigmoid)
-
-    def process(self, *input_values):
-        inputs = np.matrix([ [value] for value in input_values])
-        hidden = self.sigmoid(self.input_weights * inputs)
-        outputs = self.output_weights * hidden
-        return [output.item(0) for output in outputs]
-
-    def __repr__(self):
-        return 'NumpyBrain(\n%r,\n%r)' % (self.input_weights, self.output_weights)
-
-use_numpy = False
-if use_numpy:
-    import numpy as np
-    Brain = NumpyBrain
 
 class Character(pygame.sprite.Sprite):
     brain_inputs = 4
