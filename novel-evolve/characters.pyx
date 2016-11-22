@@ -291,9 +291,12 @@ cdef class Character:
 
     @property
     def intersect_lines(self):
-        d = self.r * 2
+        rect = self.rect
+        start = 0.2 + (self.r - 0.707) # add selection border width
+                                       # and consider start/end pos re circle.
+        end = rect.w - start
         return [
-            ((self.rect.x, self.rect.y), (self.rect.x + d, self.rect.y + d)),
+            ((rect.x + start, rect.y + start), (rect.x - end, rect.y - end)),
         ]
 
     @classmethod
