@@ -19,6 +19,7 @@ class Tree(pygame.sprite.Sprite):
             ((self.rect.x, self.rect.y), (self.rect.x + rr, self.rect.y + rr)),
         ]
         self.redraw = True
+        self.height = 1.0 # used for vision
 
     def draw(self):
         if not self.redraw:

@@ -205,8 +205,8 @@ cdef class Character:
     cdef public object genome
 
     cdef public int haptic
-    cdef public int vision_left
-    cdef public int vision_right
+    cdef public double vision_left
+    cdef public double vision_right
     cdef public object seen_thing
     cdef tuple _vision_start
     cdef tuple _vision_left_end
@@ -218,6 +218,7 @@ cdef class Character:
     cdef public int y
     cdef public int prev_x
     cdef public int prev_y
+    cdef public double height
     cdef public int created
     cdef public object tile
 
@@ -265,6 +266,7 @@ cdef class Character:
         self.y = -1 # y coord, m
         self.prev_x = -1 # 
         self.prev_y = -1 # temporary while I sort out collisions
+        self.height = 0.5 # used for vision
         self.created = 0 # age of world
         self.tile = None # set in update()
 
@@ -358,14 +360,26 @@ cdef class Character:
         else:
             pygame.draw.circle(self.image, (0, 0, 0), r_r, self.r + 2, 0)
         pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
+        
+        # eyes
         eye_pos = list(r_r)
-        eye_pos[0] += int((self.r - 5) * math.sin(self.angle))
-        eye_pos[1] -= int((self.r - 5) * math.cos(self.angle))
+        eye_pos[0] += int((self.r - 5) * math.sin(self.angle - 0.15))
+        eye_pos[1] -= int((self.r - 5) * math.cos(self.angle - 0.15))
         pygame.draw.circle(
             self.image,
-            (255 * self.vision_left, 0, 255 * self.vision_right),
+            (255 * self.vision_left, 0, 0),
             eye_pos,
-            3,
+            2,
+            0)
+
+        eye_pos = list(r_r)
+        eye_pos[0] += int((self.r - 5) * math.sin(self.angle + 0.15))
+        eye_pos[1] -= int((self.r - 5) * math.cos(self.angle + 0.15))
+        pygame.draw.circle(
+            self.image,
+            (255 * self.vision_right, 0, 0),
+            eye_pos,
+            2,
             0)
 
         if self.world.active_item is self:
@@ -434,8 +448,8 @@ cdef class Character:
         # interaction with nearby objects:
         seen_thing = None
         foods = []
-        cdef int vision_left = 0
-        cdef int vision_right = 0
+        cdef double vision_left = 0
+        cdef double vision_right = 0
         for tile in check_tiles:
             foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
             for group in tile.allfood, tile.alltrees, tile.allcharacters:
@@ -448,7 +462,7 @@ cdef class Character:
                                             vision_start_x, vision_start_y,
                                             vision_left_end_x, vision_left_end_y,
                                             vision_middle_end_x, vision_middle_end_y):
-                            vision_left = 1
+                            vision_left = item.height
                             seen_thing_left = item
                             break
                         if vision_right == 0 and line_in_triangle(iline[0][0], iline[0][1],
@@ -456,12 +470,12 @@ cdef class Character:
                                             vision_start_x, vision_start_y,
                                             vision_middle_end_x, vision_middle_end_y,
                                             vision_right_end_x, vision_right_end_y):
-                            vision_right = 1
+                            vision_right = item.height
                             seen_thing_right = item
                             break
-                    if vision_left == 1 and vision_right == 1:
+                    if vision_left != 0 and vision_right != 0:
                         break
-                if vision_left == 1 and vision_right == 1:
+                if vision_left != 0 and vision_right != 0:
                     continue
         self.vision_left = vision_left
         self.vision_right = vision_right

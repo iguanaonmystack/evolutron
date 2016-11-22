@@ -19,6 +19,7 @@ class Food(pygame.sprite.Sprite):
             ((self.rect.x, self.rect.y), (self.rect.x + w, self.rect.y + h)),
         ]
         self.redraw = True
+        self.height = 0.1 # used for vision
 
     def eaten(self):
         self.tile.allfood.remove(self)
