@@ -10,7 +10,7 @@ import group
 import tree
 import mapgen
 
-MIN_CHARACTERS = 100
+MIN_CHARACTERS = 150
 
 class WorldView(viewport.Viewport):
     def __init__(self, parent, viewport_rect, canvas_w, canvas_h):
