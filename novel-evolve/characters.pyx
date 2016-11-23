@@ -1,21 +1,36 @@
 # cython: profile=True
 
-import math
 import struct
 import random
 import operator
 import time
+
+from libc.math cimport sin, cos, exp, fabs
+cdef extern from "errno.h":
+    int errno
 
 import pygame
 from pygame.locals import *
 
 import genome
 
-def sigmoid(x):
-    try:
-        return 1 / (1 + math.exp(-x))
-    except OverflowError:
+# fast min/max functions:
+
+cdef int int_min(int a, int b):
+    return a if a < b else b
+
+cdef int int_max(int a, int b):
+    return a if a > b else b
+
+
+# Neuron activation functions:
+
+def sigmoid(double x):
+    errno = 0
+    cdef double exp_minus_x = exp(-x)
+    if exp_minus_x == 0 and errno:
         return 0
+    return 1 / (1 + exp_minus_x)
 
 def identity(x):
     return x
@@ -208,10 +223,10 @@ cdef class Character:
     cdef public double vision_left
     cdef public double vision_right
     cdef public object seen_thing
-    cdef tuple _vision_start
-    cdef tuple _vision_left_end
-    cdef tuple _vision_middle_end
-    cdef tuple _vision_right_end
+    cdef int _vision_start_x, _vision_start_y
+    cdef int _vision_left_end_x, _vision_left_end_y
+    cdef int _vision_middle_end_x, _vision_middle_end_y
+    cdef int _vision_right_end_x, _vision_right_end_y
 
     cdef public int r
     cdef public int x
@@ -225,8 +240,9 @@ cdef class Character:
     cdef public double angle
     cdef public double speed
     cdef public double spawn
+    cdef public int spawn_refractory
 
-    cdef public int energy
+    cdef public float energy
     cdef public int age
     cdef public int gen
     cdef public int parents
@@ -255,10 +271,6 @@ cdef class Character:
         self.vision_left = 0 # Whether creature can see something
         self.vision_right = 0
         self.seen_thing = None
-        self._vision_start = (0,0)
-        self._vision_left_end = (0,0)
-        self._vision_middle_end = (0,0)
-        self._vision_right_end = (0,0)
 
         # Physical properties
         self.r = radius   # radius, m
@@ -273,6 +285,7 @@ cdef class Character:
         self.angle = 0.0 # radians clockwise from north
         self.speed = 0.0 # m/tick
         self.spawn = 0.0
+        self.spawn_refractory = 100
 
         self.energy = 2000 # J
         self.age = 0 # ticks
@@ -366,8 +379,8 @@ cdef class Character:
         
         # eyes
         eye_pos = list(r_r)
-        eye_pos[0] += int((self.r - 5) * math.sin(self.angle - 0.15))
-        eye_pos[1] -= int((self.r - 5) * math.cos(self.angle - 0.15))
+        eye_pos[0] += int((self.r - 5) * sin(self.angle - 0.15))
+        eye_pos[1] -= int((self.r - 5) * cos(self.angle - 0.15))
         pygame.draw.circle(
             self.image,
             (255 * self.vision_left ** 0.3, 0, 0),
@@ -376,8 +389,8 @@ cdef class Character:
             0)
 
         eye_pos = list(r_r)
-        eye_pos[0] += int((self.r - 5) * math.sin(self.angle + 0.15))
-        eye_pos[1] -= int((self.r - 5) * math.cos(self.angle + 0.15))
+        eye_pos[0] += int((self.r - 5) * sin(self.angle + 0.15))
+        eye_pos[1] -= int((self.r - 5) * cos(self.angle + 0.15))
         pygame.draw.circle(
             self.image,
             (255 * self.vision_right ** 0.3, 0, 0),
@@ -399,11 +412,36 @@ cdef class Character:
         if self.tile:
             self.tile.allcharacters.remove(self)
 
+    cdef inline interactions(self, group):
+        for item in group.spritedict:
+            if item is self:
+                continue
+            for iline in item.intersect_lines:
+                if (
+                    self.vision_left == 0
+                    and line_in_triangle(
+                        iline[0][0], iline[0][1],
+                        iline[1][0], iline[1][1],
+                        self._vision_start_x, self._vision_start_y,
+                        self._vision_left_end_x, self._vision_left_end_y,
+                        self._vision_middle_end_x, self._vision_middle_end_y)
+                ):
+                    self.vision_left = item.height
+                if (
+                    self.vision_right == 0
+                    and line_in_triangle(
+                        iline[0][0], iline[0][1],
+                        iline[1][0], iline[1][1],
+                        self._vision_start_x, self._vision_start_y,
+                        self._vision_middle_end_x, self._vision_middle_end_y,
+                        self._vision_right_end_x, self._vision_right_end_y)
+                ):
+                    self.vision_right = item.height
+                if self.vision_left != 0 and self.vision_right != 0:
+                    return
+
     def update(self):
-        cdef int vision_start_x, vision_start_y
-        cdef int vision_left_end_x, vision_left_end_y
-        cdef int vision_middle_end_x, vision_middle_end_y
-        cdef int vision_right_end_x, vision_right_end_y
+        cdef int i, j, x, y
 
         world = self.world
 
@@ -416,7 +454,8 @@ cdef class Character:
         if tile is not None and tile is not self.tile:
             # tile changed
             oldtile = self.tile
-            oldtile and oldtile.allcharacters.remove(self)
+            if oldtile is not None:
+                oldtile.allcharacters.remove(self)
             tile.allcharacters.add(self)
             self.tile = tile
         check_tiles = []
@@ -429,16 +468,15 @@ cdef class Character:
                     pass
 
         # vision triangle
-        vr = 50
-        angle = self.angle
-        vision_start_x = self.x + self.r + 2
-        vision_start_y = self.y + self.r + 2
-        vision_left_end_x = vision_start_x + (vr * math.sin(angle - 0.3))
-        vision_left_end_y = vision_start_y - (vr * math.cos(angle - 0.3))
-        vision_middle_end_x = vision_start_x + (vr * math.sin(angle))
-        vision_middle_end_y = vision_start_y - (vr * math.cos(angle))
-        vision_right_end_x = vision_start_x + (vr * math.sin(angle + 0.3))
-        vision_right_end_y = vision_start_y - (vr * math.cos(angle + 0.3))
+        cdef int vr = 50
+        cdef int vision_start_x = self.x + self.r + 2
+        cdef int vision_start_y = self.y + self.r + 2
+        vision_left_end_x = <int>(vision_start_x + (vr * sin(self.angle - 0.3)))
+        vision_left_end_y = <int>(vision_start_y - (vr * cos(self.angle - 0.3)))
+        vision_middle_end_x = <int>(vision_start_x + (vr * sin(self.angle)))
+        vision_middle_end_y = <int>(vision_start_y - (vr * cos(self.angle)))
+        vision_right_end_x = <int>(vision_start_x + (vr * sin(self.angle + 0.3)))
+        vision_right_end_y = <int>(vision_start_y - (vr * cos(self.angle + 0.3)))
 
         #self._vision_start = vision_start_x, vision_start_y
         #self._vision_left_end = vision_left_end_x, vision_left_end_y
@@ -449,54 +487,30 @@ cdef class Character:
         self.age += 1
 
         # interaction with nearby objects:
-        seen_thing = None
         foods = []
-        cdef double vision_left = 0
-        cdef double vision_right = 0
         for tile in check_tiles:
             foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
-            for group in tile.allfood, tile.alltrees, tile.allcharacters:
-                for item in group.spritedict:
-                    if item is self:
-                        continue
-                    for iline in item.intersect_lines:
-                        if vision_left == 0 and line_in_triangle(iline[0][0], iline[0][1],
-                                            iline[1][0], iline[1][1],
-                                            vision_start_x, vision_start_y,
-                                            vision_left_end_x, vision_left_end_y,
-                                            vision_middle_end_x, vision_middle_end_y):
-                            vision_left = item.height
-                            seen_thing_left = item
-                        if vision_right == 0 and line_in_triangle(iline[0][0], iline[0][1],
-                                            iline[1][0], iline[1][1],
-                                            vision_start_x, vision_start_y,
-                                            vision_middle_end_x, vision_middle_end_y,
-                                            vision_right_end_x, vision_right_end_y):
-                            vision_right = item.height
-                            seen_thing_right = item
-                        if vision_left != 0 and vision_right != 0:
-                            break
-                    if vision_left != 0 and vision_right != 0:
-                        break
-                if vision_left != 0 and vision_right != 0:
-                    continue
-        self.vision_left = vision_left
-        self.vision_right = vision_right
-        self.seen_thing = seen_thing
+            self.interactions(tile.allfood)
+            self.interactions(tile.alltrees)
+            self.interactions(tile.allcharacters)
 
         # eating:
+        cdef int food_energy
         for food in foods:
-            self.energy += food.energy
+            food_energy = food.energy
+            self.energy += food_energy
             food.eaten()
 
         # brain - update brain_inputs and brain_outputs above if changing
         inputs = (
             1,
-            vision_left,
-            vision_right,
+            self.vision_left,
+            self.vision_right,
             self.haptic,
             self.energy / 10000,
         )
+        cdef double angle_change
+        cdef double Fmove
         outputs = self.brain.process(*inputs)
         (
             angle_change,
@@ -506,16 +520,18 @@ cdef class Character:
         # compensate values from NN
         angle_change /= 2
 
-        self.energy -= abs(Fmove * 5) + 10
+        self.energy -= fabs(Fmove * 5) + 10
         if self.energy <= 0:
             self.die()
             return
 
         # asexual reproduction:
-        if self.spawn > 0.5 and self.energy > 6000:
-            self.energy -= 6000
+        cdef Character newchar
+        if self.spawn > 0.5 and self.energy > 3000 and self.spawn_refractory == 0:
+            self.energy -= 3000
+            self.spawn_refractory = 60
             newgenome = self.genome.mutate()
-            newchar = self.__class__.from_genome(world, newgenome)
+            newchar = Character.from_genome(world, newgenome)
             newchar.x = self.x
             newchar.rect.x = self.rect.x
             newchar.y = self.y
@@ -524,25 +540,31 @@ cdef class Character:
             newchar.parents = 1
             self.children += 1
             op = operator.sub
-            while pygame.sprite.spritecollideany(newchar, world.allcharacters):
-                x = op(newchar.x, 1)
+            while pygame.sprite.spritecollideany(newchar, world.allcharacters)\
+                or pygame.sprite.spritecollideany(newchar, world.alltrees):
+                x = op(newchar.x, 2)
                 newchar.x = x
                 newchar.rect.x = x
                 if newchar.x < 1:
                     op = operator.add
             world.allcharacters.add(newchar)
 
+        if self.spawn_refractory > 0:
+            self.spawn_refractory -= 1
+
         # movement:
         Ffriction = self.speed / 4
         acceleration = (Fmove - Ffriction) / (self.r)
         self.prev_x, self.prev_y = self.x, self.y
         self.speed += acceleration
-        ddist = self.speed
-        self.angle = (self.angle + angle_change) % (2 * math.pi)
-        x = self.x + ddist * math.sin(self.angle)
-        y = self.y - ddist * math.cos(self.angle)
-        self.x = min(max(0, x), world.canvas_w - self.r)
-        self.y = min(max(0, y), world.canvas_h - self.r)
+        cdef double ddist = self.speed
+        cdef int canvas_w = world.canvas_w
+        cdef int canvas_h = world.canvas_h
+        self.angle = (self.angle + angle_change) % 6.283185307179586
+        x = self.x + <int>(ddist * sin(self.angle))
+        y = self.y - <int>(ddist * cos(self.angle))
+        self.x = int_min(int_max(0, x), canvas_w - self.r)
+        self.y = int_min(int_max(0, y), canvas_h - self.r)
         collided = []
         for tile in check_tiles:
             collided.extend(pygame.sprite.spritecollide(self, tile.alltrees, 0))
