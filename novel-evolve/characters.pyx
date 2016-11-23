@@ -370,7 +370,7 @@ cdef class Character:
         eye_pos[1] -= int((self.r - 5) * math.cos(self.angle - 0.15))
         pygame.draw.circle(
             self.image,
-            (255 * self.vision_left, 0, 0),
+            (255 * self.vision_left ** 0.3, 0, 0),
             eye_pos,
             2,
             0)
@@ -380,7 +380,7 @@ cdef class Character:
         eye_pos[1] -= int((self.r - 5) * math.cos(self.angle + 0.15))
         pygame.draw.circle(
             self.image,
-            (255 * self.vision_right, 0, 0),
+            (255 * self.vision_right ** 0.3, 0, 0),
             eye_pos,
             2,
             0)
@@ -467,7 +467,6 @@ cdef class Character:
                                             vision_middle_end_x, vision_middle_end_y):
                             vision_left = item.height
                             seen_thing_left = item
-                            break
                         if vision_right == 0 and line_in_triangle(iline[0][0], iline[0][1],
                                             iline[1][0], iline[1][1],
                                             vision_start_x, vision_start_y,
@@ -475,6 +474,7 @@ cdef class Character:
                                             vision_right_end_x, vision_right_end_y):
                             vision_right = item.height
                             seen_thing_right = item
+                        if vision_left != 0 and vision_right != 0:
                             break
                     if vision_left != 0 and vision_right != 0:
                         break
