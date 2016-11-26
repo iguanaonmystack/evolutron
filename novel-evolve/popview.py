@@ -6,6 +6,7 @@ from pygame.locals import *
 
 import viewport
 import characters
+import neuron
 
 class GenePopView(viewport.Viewport):
 
@@ -50,7 +51,7 @@ class GenePopView(viewport.Viewport):
             for i in range(g.hidden_neurons):
                 for j in range(g._inputs):
                     weight = g.hidden0_weights[i * g._inputs + j]             
-                    colour = int(characters.sigmoid(weight) * 255)
+                    colour = int(neuron.sigmoid(weight) * 255)
                     start = (xoff, off)
                     xoff += xwidth
                     end = (xoff, off)
@@ -59,7 +60,7 @@ class GenePopView(viewport.Viewport):
                         start, end, ywidth)
                 for j in range(g._outputs):
                     weight = g.hidden0_weights[i * g._outputs + j]             
-                    colour = int(characters.sigmoid(weight) * 255)
+                    colour = int(neuron.sigmoid(weight) * 255)
                     start = (xoff, off)
                     xoff += xwidth
                     end = (xoff, off)

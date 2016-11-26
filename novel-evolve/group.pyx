@@ -19,20 +19,30 @@ class Group(pygame_Group):
         super(Group, self).draw(onto)
 
     def collisions(self):
+        cdef double xoff, yoff
         world = self.world
         for sprite, other in combinations(self, 2):
             if collide_rect(sprite, other):
-                if sprite.prev_x is not None:
-                    sprite.x = sprite.prev_x
-                    sprite.y = sprite.prev_y
-                if other.prev_x is not None:
-                    other.x = other.prev_x
-                    other.y = other.prev_y
-                # TODO - be smarter here. work out midpoint and use that.
-                sprite.speed = 0
+                sprite_midpoint_x = sprite.midpoint_x()
+                sprite_midpoint_y = sprite.midpoint_y()
+                other_midpoint_x = other.midpoint_x()
+                other_midpoint_y = other.midpoint_y()
+                midpoint_x = (sprite_midpoint_x + other_midpoint_x) / 2
+                midpoint_y = (sprite_midpoint_y + other_midpoint_y) / 2
+
+                sprite_move_x = 5. / (sprite_midpoint_x - midpoint_x)
+                sprite_move_y = 5. / (sprite_midpoint_y - midpoint_y)
+                sprite.set_midpoint_x(sprite_midpoint_x + min(sprite_move_x, 2.5))
+                sprite.set_midpoint_y(sprite_midpoint_y + min(sprite_move_y, 2.5))
+                other_move_x = 5. / (other_midpoint_x - midpoint_x)
+                other_move_y = 5. / (other_midpoint_y - midpoint_y)
+                other.set_midpoint_x(other_midpoint_x + min(other_move_x, 2.5))
+                other.set_midpoint_y(other_midpoint_y + min(other_move_y, 2.5))
+
                 sprite.haptic = 1
-                other.speed = 0
+                sprite.speed /= 2
                 other.haptic = 1
+                other.speed /= 2
 
                 # sexual reproduction:
                 if sprite.spawn > 0 and other.spawn > 0 \
@@ -51,15 +61,9 @@ class Group(pygame_Group):
                     newchar.rect.y = y
                     newchar.gen = max(sprite.gen, other.gen) + 1
                     newchar.parents = 2
+                    newchar.energy = 3000
                     sprite.children += 1
                     other.children += 1
-                    op = operator.sub
-                    while spritecollideany(newchar, world.allcharacters):
-                        x = op(newchar.x, 1)
-                        newchar.x = x
-                        newchar.rect.x = x
-                        if newchar.x < 1:
-                            op = operator.add
                     world.allcharacters.add(newchar)
 
 
