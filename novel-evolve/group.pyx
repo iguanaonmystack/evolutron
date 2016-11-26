@@ -46,19 +46,16 @@ class Group(pygame_Group):
 
                 # sexual reproduction:
                 if sprite.spawn > 0 and other.spawn > 0 \
-                and sprite.energy > 1500 and other.energy > 1500:
-                    sprite.energy -= 1500
-                    other.energy -= 1500
+                and sprite.energy > 2000 and other.energy > 2000 \
+                and sprite.spawn_refractory == 0 and other.spawn_refractory == 0:
+                    sprite.energy -= 2000
+                    other.energy -= 2000
                     self.spawn_refractory = 30
                     self.spawn_refractory = 30
                     newgenome = Genome.from_parents(sprite.genome, other.genome)
                     newchar = Character.from_genome(world, newgenome)
-                    x = sprite.x + other.x // 2
-                    y = sprite.y + other.y // 2
-                    newchar.x = x
-                    newchar.rect.x = x
-                    newchar.y = y
-                    newchar.rect.y = y
+                    newchar.set_midpoint_x(midpoint_x)
+                    newchar.set_midpoint_y(midpoint_y)
                     newchar.gen = max(sprite.gen, other.gen) + 1
                     newchar.parents = 2
                     newchar.energy = 3000
