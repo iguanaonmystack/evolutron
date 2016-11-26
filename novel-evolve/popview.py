@@ -15,7 +15,7 @@ class GenePopView(viewport.Viewport):
             parent, viewport_rect, viewport_rect.w, 200)
         self.font = pygame.font.Font(None, 18)
         self.xwidth = 2
-        self.ywidth = 2
+        self.ywidth = 1
         self.sorted_chars = []
 
     def draw(self):
@@ -107,7 +107,7 @@ class TimePopView(viewport.Viewport):
                 ('AvgAge', self.avgage_plots, avgage, (0, 255, 0)),
                 ('AvgGen', self.avggen_plots, avggen, (0, 255, 255))):
                 plots.append(latest)
-                if len(plots) > 100:
+                if len(plots) > 150:
                     plots.popleft()
                 width = 2
                 max_ = max(plots) or 1
