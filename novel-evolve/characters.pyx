@@ -453,7 +453,8 @@ cdef class Character(sprite.Sprite):
         # compensate values from NN
         angle_change /= 2
 
-        self.energy -= fabs(Fmove * 5) + 10
+        Fmove = fabs(Fmove)
+        self.energy -= Fmove * 5 + 10
         if self.energy <= 0:
             self.die()
             return
