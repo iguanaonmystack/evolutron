@@ -5,6 +5,8 @@ import random
 import operator
 import time
 
+from cpython cimport array
+from array import array
 from libc.math cimport sin, cos, exp, fabs
 cdef extern from "errno.h":
     int errno
@@ -13,30 +15,18 @@ import pygame
 from pygame.locals import *
 
 import genome
+cimport sprite
+from neuron cimport Neuron
+from neuron import identity
 
 # fast min/max functions:
 
-cdef int int_min(int a, int b):
+cdef double double_min(double a, double b):
     return a if a < b else b
 
-cdef int int_max(int a, int b):
+cdef double double_max(double a, double b):
     return a if a > b else b
 
-
-# Neuron activation functions:
-
-def sigmoid(double x):
-    errno = 0
-    cdef double exp_minus_x = exp(-x)
-    if exp_minus_x == 0 and errno:
-        return 0
-    return 1 / (1 + exp_minus_x)
-
-def identity(x):
-    return x
-
-def cube(x):
-    return x**3
 
 
 # Line collision algorithm. Ref: https://stackoverflow.com/a/9997374 and 
@@ -96,72 +86,13 @@ cdef bint line_in_triangle(int La_x, int La_y,
 
 # Main classes:
 
-class Neuron(pygame.sprite.Sprite):
+cdef class Brain:
+    cdef public object input_weights
+    cdef public object output_weights
+    cdef public object inputs
+    cdef public object hidden0
+    cdef public object outputs
 
-    def __init__(self, input_weights, initial_value=None, fn=sigmoid):
-        super(Neuron, self).__init__()
-        self.fn = fn
-        self.raw_value = initial_value
-        self.value = initial_value
-        self.input_weights = input_weights[:]
-
-    def process(self, inputs):
-        cdef int i, inputs_len
-        cdef double raw_value = 0.0
-        inputs_len = len(inputs)
-        for i in range(inputs_len):
-            input_ = inputs[i]
-            weight = self.input_weights[i]
-            raw_value += input_.value * weight
-        self.raw_value = raw_value
-        self.value = self.fn(self.raw_value)
-
-    def connect_viewport(self, viewport):
-        self.image = pygame.Surface((40, 40), SRCALPHA).convert_alpha()
-        self.rect = self.image.get_rect()
-        self.font = pygame.font.Font(None, 18)
-        self.viewport = viewport
-
-    def draw(self):
-        centrepos = (20, 20)
-        colour = 128, 255, 128
-        if self.viewport.active_item is self:
-            colour = 0, 255, 0
-        pygame.draw.circle(self.image, colour, centrepos, 20, 0)
-        text = self.font.render(
-            str(self.value and '%0.1f'%self.value), True, (0, 0, 0))
-        rect = text.get_rect()
-        textpos = centrepos[0] - rect.w // 2, centrepos[1] - rect.h // 2
-
-        self.image.blit(text, textpos)
-
-    def __repr__(self):
-        return "Neuron(%r, %r, %r)" % (self.input_weights, self.value, self.fn)
-
-    def __str__(self):
-        lines = [
-            'Neuron:',
-            'Current value: %r' % self.value,
-            'Activation function: %r' % self.fn.__name__,
-            'Input weights:'
-        ]
-        weight_sum = 0
-        for i, input_weight in enumerate(self.input_weights):
-            lines.append('    %d: %r' % (i, input_weight))
-            weight_sum += input_weight
-        lines.append('Sum wt[i] * input[i]: %r' % self.raw_value)
-        return '\n'.join(lines)
-
-    def dump(self):
-        obj = {
-            'fn': self.fn.__name__,
-            'value': self.value,
-            'input_weights': self.input_weights,
-        }
-        return obj
-
-
-class Brain(object):
     def __init__(self, input_weights, output_weights):
         '''
         input_weights -- an array of len of hidden neurons, each item
@@ -176,20 +107,24 @@ class Brain(object):
         self.input_weights = input_weights
         self.output_weights = output_weights
         num_inputs = input_weights and len(input_weights[0]) or 0
-        self.inputs = [Neuron([], 0, fn=identity) for i in range(num_inputs)]
+        self.inputs = [Neuron(array('d', []), 0, fn=identity) for i in range(num_inputs)]
         self.hidden0 = []
         for neuron_input_weights in input_weights:
-            self.hidden0.append(Neuron(neuron_input_weights))
+            self.hidden0.append(Neuron(array('d', neuron_input_weights)))
         self.outputs = []
         for output_neuron_weights in output_weights:
-            self.outputs.append(Neuron(output_neuron_weights, fn=identity))
+            self.outputs.append(Neuron(array('d', output_neuron_weights), fn=identity))
 
-    def process(self, *input_values):
-        for neuron, input_value in zip(self.inputs, input_values):
-            neuron.value = input_value
+    def process(self, double[:] input_values):
+        cdef int i
+        cdef Neuron neuron
+        inputs = self.inputs
+        for i in range(len(inputs)):
+            neuron = inputs[i]
+            neuron.value = input_values[i]
         return self.reprocess()
 
-    def reprocess(self):
+    cdef reprocess(self):
         for neuron in self.hidden0:
             neuron.process(self.inputs)
         for output in self.outputs:
@@ -215,7 +150,7 @@ class Brain(object):
         return self
 
 
-cdef class Character:
+cdef class Character(sprite.Sprite):
     cdef public object world
     cdef public object genome
 
@@ -229,10 +164,10 @@ cdef class Character:
     cdef int _vision_right_end_x, _vision_right_end_y
 
     cdef public int r
-    cdef public int x
-    cdef public int y
-    cdef public int prev_x
-    cdef public int prev_y
+    cdef public double x
+    cdef public double y
+    cdef public double prev_x
+    cdef public double prev_y
     cdef public double height
     cdef public int created
     cdef public object tile
@@ -250,19 +185,13 @@ cdef class Character:
 
     cdef public object brain
 
-    cdef public object image
-    cdef public object rect
     cdef public bint redraw
 
     brain_inputs = 5
     brain_outputs = 3
 
-    # pygame compatibility (since we can't inherit Sprite from this cdef class)
-    cdef object __g
-
     def __init__(self, world, radius):
-        self.__g = {} # The groups the sprite is in
-
+        sprite.Sprite.__init__(self)
         self.world = world
         self.genome = None
 
@@ -401,9 +330,9 @@ cdef class Character:
         if self.world.active_item is self:
             self._draw_border((0, 0, 255, 255))
 
-        #pygame.draw.line(self.world.canvas, (0,0,0), self._vision_start, self._vision_left_end)
-        #pygame.draw.line(self.world.canvas, (0,0,0), self._vision_start, self._vision_middle_end)
-        #pygame.draw.line(self.world.canvas, (0,0,0), self._vision_start, self._vision_right_end)
+        #pygame.draw.line(self.world.canvas, (0,0,0), (self._vision_start_x, self._vision_start_y), (self._vision_left_end_x, self._vision_left_end_y))
+        #pygame.draw.line(self.world.canvas, (0,0,0), (self._vision_start_x, self._vision_start_y), (self._vision_middle_end_x, self._vision_middle_end_y))
+        #pygame.draw.line(self.world.canvas, (0,0,0), (self._vision_start_x, self._vision_start_y), (self._vision_right_end_x, self._vision_right_end_y))
 
     def die(self):
         self.world.allcharacters.remove(self)
@@ -441,7 +370,8 @@ cdef class Character:
                     return
 
     def update(self):
-        cdef int i, j, x, y
+        cdef int i, j
+        cdef double x, y
 
         world = self.world
 
@@ -469,25 +399,28 @@ cdef class Character:
 
         # vision triangle
         cdef int vr = 50
-        cdef int vision_start_x = self.x + self.r + 2
-        cdef int vision_start_y = self.y + self.r + 2
-        vision_left_end_x = <int>(vision_start_x + (vr * sin(self.angle - 0.3)))
-        vision_left_end_y = <int>(vision_start_y - (vr * cos(self.angle - 0.3)))
-        vision_middle_end_x = <int>(vision_start_x + (vr * sin(self.angle)))
-        vision_middle_end_y = <int>(vision_start_y - (vr * cos(self.angle)))
-        vision_right_end_x = <int>(vision_start_x + (vr * sin(self.angle + 0.3)))
-        vision_right_end_y = <int>(vision_start_y - (vr * cos(self.angle + 0.3)))
-
-        #self._vision_start = vision_start_x, vision_start_y
-        #self._vision_left_end = vision_left_end_x, vision_left_end_y
-        #self._vision_middle_end = vision_middle_end_x, vision_middle_end_y
-        #self._vision_right_end = vision_right_end_x, vision_right_end_y
+        self._vision_start_x = <int>self.x + self.r + 2
+        self._vision_start_y = <int>self.y + self.r + 2
+        self._vision_left_end_x = <int>(
+            self._vision_start_x + (vr * sin(self.angle - 0.3)))
+        self._vision_left_end_y = <int>(
+            self._vision_start_y - (vr * cos(self.angle - 0.3)))
+        self._vision_middle_end_x = <int>(
+            self._vision_start_x + (vr * sin(self.angle)))
+        self._vision_middle_end_y = <int>(
+            self._vision_start_y - (vr * cos(self.angle)))
+        self._vision_right_end_x = <int>(
+            self._vision_start_x + (vr * sin(self.angle + 0.3)))
+        self._vision_right_end_y = <int>(
+            self._vision_start_y - (vr * cos(self.angle + 0.3)))
 
         # age:
         self.age += 1
 
         # interaction with nearby objects:
         foods = []
+        self.vision_left = 0
+        self.vision_right = 0
         for tile in check_tiles:
             foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
             self.interactions(tile.allfood)
@@ -502,16 +435,16 @@ cdef class Character:
             food.eaten()
 
         # brain - update brain_inputs and brain_outputs above if changing
-        inputs = (
+        inputs = array('d', [
             1,
             self.vision_left,
             self.vision_right,
             self.haptic,
             self.energy / 10000,
-        )
+        ])
         cdef double angle_change
         cdef double Fmove
-        outputs = self.brain.process(*inputs)
+        outputs = self.brain.process(inputs)
         (
             angle_change,
             Fmove,
@@ -527,8 +460,8 @@ cdef class Character:
 
         # asexual reproduction:
         cdef Character newchar
-        if self.spawn > 0.5 and self.energy > 3000 and self.spawn_refractory == 0:
-            self.energy -= 3000
+        if self.spawn > 0.5 and self.energy > 4000 and self.spawn_refractory == 0:
+            self.energy -= 4000
             self.spawn_refractory = 60
             newgenome = self.genome.mutate()
             newchar = Character.from_genome(world, newgenome)
@@ -538,15 +471,8 @@ cdef class Character:
             newchar.rect.y = self.rect.y
             newchar.gen = self.gen + 1
             newchar.parents = 1
+            newchar.energy = 3000
             self.children += 1
-            op = operator.sub
-            while pygame.sprite.spritecollideany(newchar, world.allcharacters)\
-                or pygame.sprite.spritecollideany(newchar, world.alltrees):
-                x = op(newchar.x, 2)
-                newchar.x = x
-                newchar.rect.x = x
-                if newchar.x < 1:
-                    op = operator.add
             world.allcharacters.add(newchar)
 
         if self.spawn_refractory > 0:
@@ -561,22 +487,45 @@ cdef class Character:
         cdef int canvas_w = world.canvas_w
         cdef int canvas_h = world.canvas_h
         self.angle = (self.angle + angle_change) % 6.283185307179586
-        x = self.x + <int>(ddist * sin(self.angle))
-        y = self.y - <int>(ddist * cos(self.angle))
-        self.x = int_min(int_max(0, x), canvas_w - self.r)
-        self.y = int_min(int_max(0, y), canvas_h - self.r)
+        x = self.x + (ddist * sin(self.angle))
+        y = self.y - (ddist * cos(self.angle))
+        self.x = double_min(double_max(0, x), canvas_w - 2 * self.r)
+        self.y = double_min(double_max(0, y), canvas_h - 2 * self.r)
         collided = []
         for tile in check_tiles:
             collided.extend(pygame.sprite.spritecollide(self, tile.alltrees, 0))
+        cdef double midpoint_x, midpoint_y
         for item in collided:
-            self.x = self.prev_x
-            self.y = self.prev_y
+            midpoint_x = (self.x + item.rect.x) / 2
+            midpoint_y = (self.y + item.rect.y) / 2
+            if midpoint_x != self.x:
+                self.x += 10. / (self.x - midpoint_x)
+            if midpoint_y != self.y:
+                self.y += 10. / (self.y - midpoint_y)
+            self.rect.x = self.x
+            self.rect.y = self.x
+
             self.speed = 0
             self.haptic = 1
             break
         else:
             self.haptic = 0 # may still be updated by Group.collisions()
+    
+    def set_midpoint_x(self, double x):
+        x = x - 2 - self.r
+        self.x = x
+        self.rect.x = x
 
+    def set_midpoint_y(self, double y):
+        y = y - 2 - self.r
+        self.y = y
+        self.rect.y = y
+
+    def midpoint_x(self):
+        return self.x + 2 + self.r
+    
+    def midpoint_y(self):
+        return self.y + 2 + self.r
 
     def __repr__(self):
         return '<Char at {},{}>'.format(self.x, self.y)
@@ -629,11 +578,4 @@ cdef class Character:
         return self
 
 
-    # pygame comptibility:
-
-    def add_internal(self, group):
-        self.__g[group] = 0
-
-    def remove_internal(self, group):
-        del self.__g[group]
 

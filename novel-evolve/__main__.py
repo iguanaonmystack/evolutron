@@ -7,7 +7,7 @@ import json
 import argparse
 
 import random
-random.seed(100)
+random.seed(101)
 
 import pygame
 from pygame.locals import *
