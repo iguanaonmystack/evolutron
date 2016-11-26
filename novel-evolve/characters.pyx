@@ -1,4 +1,5 @@
 # cython: profile=True
+cimport cython
 
 import struct
 import random
@@ -15,19 +16,11 @@ import pygame
 from pygame.locals import *
 
 import genome
-cimport sprite
+from sprite cimport Sprite
 from neuron cimport Neuron
 from neuron import identity
 
-# fast min/max functions:
-
-cdef double double_min(double a, double b):
-    return a if a < b else b
-
-cdef double double_max(double a, double b):
-    return a if a > b else b
-
-
+from characters cimport Character, Brain
 
 # Line collision algorithm. Ref: https://stackoverflow.com/a/9997374 and 
 # http://www.bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
@@ -87,13 +80,7 @@ cdef bint line_in_triangle(int La_x, int La_y,
 # Main classes:
 
 cdef class Brain:
-    cdef public object input_weights
-    cdef public object output_weights
-    cdef public object inputs
-    cdef public object hidden0
-    cdef public object outputs
-
-    def __init__(self, input_weights, output_weights):
+    def __cinit__(self, input_weights, output_weights):
         '''
         input_weights -- an array of len of hidden neurons, each item
             being an array of len of number of desired inputs.
@@ -115,7 +102,7 @@ cdef class Brain:
         for output_neuron_weights in output_weights:
             self.outputs.append(Neuron(array('d', output_neuron_weights), fn=identity))
 
-    def process(self, double[:] input_values):
+    cdef process(self, double[:] input_values):
         cdef int i
         cdef Neuron neuron
         inputs = self.inputs
@@ -150,48 +137,11 @@ cdef class Brain:
         return self
 
 
-cdef class Character(sprite.Sprite):
-    cdef public object world
-    cdef public object genome
-
-    cdef public int haptic
-    cdef public double vision_left
-    cdef public double vision_right
-    cdef public object seen_thing
-    cdef int _vision_start_x, _vision_start_y
-    cdef int _vision_left_end_x, _vision_left_end_y
-    cdef int _vision_middle_end_x, _vision_middle_end_y
-    cdef int _vision_right_end_x, _vision_right_end_y
-
-    cdef public int r
-    cdef public double x
-    cdef public double y
-    cdef public double prev_x
-    cdef public double prev_y
-    cdef public double height
-    cdef public int created
-    cdef public object tile
-
-    cdef public double angle
-    cdef public double speed
-    cdef public double spawn
-    cdef public int spawn_refractory
-
-    cdef public float energy
-    cdef public int age
-    cdef public int gen
-    cdef public int parents
-    cdef public int children
-
-    cdef public object brain
-
-    cdef public bint redraw
-
+cdef class Character(Sprite):
     brain_inputs = 5
     brain_outputs = 3
 
-    def __init__(self, world, radius):
-        sprite.Sprite.__init__(self)
+    def __cinit__(self, object world, int radius):
         self.world = world
         self.genome = None
 
@@ -199,7 +149,6 @@ cdef class Character(sprite.Sprite):
         self.haptic = 0 # touching anything
         self.vision_left = 0 # Whether creature can see something
         self.vision_right = 0
-        self.seen_thing = None
 
         # Physical properties
         self.r = radius   # radius, m
@@ -244,11 +193,15 @@ cdef class Character(sprite.Sprite):
     @classmethod
     def from_random(cls, world):
         g = genome.Genome.from_random(cls.brain_inputs, cls.brain_outputs)
-        return cls.from_genome(world, g)
+        return Character.from_genome(world, g)
 
     @classmethod
     def from_genome(cls, world, genome):
-        self = cls(world, genome.radius)
+        self = Character(world, genome.radius)
+        self.load_genome(genome)
+        return self
+
+    cdef void load_genome(Character self, object genome):
         num_hidden_neurons = genome.hidden_neurons
         input_weights = []
         output_weights = []
@@ -282,7 +235,6 @@ cdef class Character(sprite.Sprite):
 
         self.brain = Brain(input_weights, output_weights)
         self.genome = genome
-        return self
 
     def _draw_border(self, colour):
         pygame.draw.lines(self.image, colour, 1, [
@@ -334,14 +286,14 @@ cdef class Character(sprite.Sprite):
         #pygame.draw.line(self.world.canvas, (0,0,0), (self._vision_start_x, self._vision_start_y), (self._vision_middle_end_x, self._vision_middle_end_y))
         #pygame.draw.line(self.world.canvas, (0,0,0), (self._vision_start_x, self._vision_start_y), (self._vision_right_end_x, self._vision_right_end_y))
 
-    def die(self):
+    cpdef void die(self):
         self.world.allcharacters.remove(self)
         if self.world.active_item is self:
             self.world.active_item = None
         if self.tile:
             self.tile.allcharacters.remove(self)
 
-    cdef inline interactions(self, group):
+    cdef inline void interactions(self, group):
         for item in group.spritedict:
             if item is self:
                 continue
@@ -369,6 +321,7 @@ cdef class Character(sprite.Sprite):
                 if self.vision_left != 0 and self.vision_right != 0:
                     return
 
+    @cython.cdivision(True)
     def update(self):
         cdef int i, j
         cdef double x, y
@@ -435,7 +388,7 @@ cdef class Character(sprite.Sprite):
             food.eaten()
 
         # brain - update brain_inputs and brain_outputs above if changing
-        inputs = array('d', [
+        cdef double[:] inputs = array('d', [
             1,
             self.vision_left,
             self.vision_right,
@@ -465,7 +418,8 @@ cdef class Character(sprite.Sprite):
             self.energy -= 4000
             self.spawn_refractory = 60
             newgenome = self.genome.mutate()
-            newchar = Character.from_genome(world, newgenome)
+            newchar = Character(world, 0)
+            newchar.load_genome(newgenome)
             newchar.x = self.x
             newchar.rect.x = self.rect.x
             newchar.y = self.y
@@ -512,20 +466,20 @@ cdef class Character(sprite.Sprite):
         else:
             self.haptic = 0 # may still be updated by Group.collisions()
     
-    def set_midpoint_x(self, double x):
+    cdef void set_midpoint_x(self, double x):
         x = x - 2 - self.r
         self.x = x
         self.rect.x = x
 
-    def set_midpoint_y(self, double y):
+    cdef void set_midpoint_y(self, double y):
         y = y - 2 - self.r
         self.y = y
         self.rect.y = y
 
-    def midpoint_x(self):
+    cdef double midpoint_x(self):
         return self.x + 2 + self.r
     
-    def midpoint_y(self):
+    cdef double midpoint_y(self):
         return self.y + 2 + self.r
 
     def __repr__(self):
@@ -541,7 +495,6 @@ cdef class Character(sprite.Sprite):
             "r: %dm" % self.r,
             "angle: %.2f radians" % self.angle,
             "speed: %.2fm/t" % self.speed,
-            "vision: %r" % self.seen_thing,
             "children: %s" % self.children,
             "x: %dm E" % self.x,
             "y: %dm S" % self.y,
