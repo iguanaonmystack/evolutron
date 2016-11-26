@@ -555,9 +555,12 @@ cdef class Character(sprite.Sprite):
             'created': self.created,
             'angle': self.angle,
             'speed': self.speed,
+            'spawn_refractory': self.spawn_refractory,
             'energy': self.energy,
             'age': self.age,
             'gen': self.gen,
+            'parents': self.parents,
+            'children': self.children,
             'brain': self.brain.dump(),
             'genome': self.genome.dump(),
         }
@@ -571,9 +574,12 @@ cdef class Character(sprite.Sprite):
         self.created = obj['created']
         self.angle = obj['angle']
         self.speed = obj['speed']
+        self.spawn_refractory = obj['spawn_refractory']
         self.energy = obj['energy']
         self.age = obj['age']
         self.gen = obj['gen']
+        self.parents = obj['parents']
+        self.children = obj['children']
         self.brain = Brain.load(obj['brain'])
         #self.genome = genome.Genome.load(obj['genome'])
         return self

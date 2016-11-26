@@ -22,7 +22,7 @@ class TileView(pygame.sprite.Sprite):
         if self.tile.terrain == 'meadow':
             self.fertility_mult = 0.0025
             self.colour = (80, 180, 80)
-            self.max_food = 5
+            self.max_food = 2
         elif self.tile.terrain == 'lake':
             self.fertility_mult = 0
             self.colour = (0, 0, 215)

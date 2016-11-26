@@ -85,7 +85,7 @@ cdef class Neuron(Sprite):
         obj = {
             'fn': self.fn.__name__,
             'value': self.value,
-            'input_weights': self.input_weights,
+            'input_weights': list(self.input_weights),
         }
         return obj
 

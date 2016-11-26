@@ -5,6 +5,7 @@ import sys
 import time
 import json
 import argparse
+import traceback
 
 import random
 random.seed(101)
@@ -110,10 +111,13 @@ def main():
                     else:
                         render = True
                 elif event.key == K_d:
-                    if window.world.active_item:
-                        with open('active-%s.json'%int(time.time()), 'w') as f:
-                            json.dump(window.world.active_item.dump(), f,
-                                sort_keys=True, indent=4)
+                    try:
+                        if window.world.active_item:
+                            with open('active-%s.json'%int(time.time()), 'w') as f:
+                                json.dump(window.world.active_item.dump(), f,
+                                    sort_keys=True, indent=4)
+                    except:
+                        traceback.print_exc()
             elif event.type==VIDEORESIZE:
                 screen = pygame.display.set_mode(event.dict['size'], RESIZABLE)
                 window.screen = screen
