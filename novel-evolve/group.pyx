@@ -1,10 +1,11 @@
 # cython: profile=True
+cimport cython
 
 import operator
 from itertools import combinations
 from pygame.sprite import Group as pygame_Group, collide_rect, spritecollideany
 
-from characters import Character
+from characters cimport Character
 from genome import Genome
 
 class Group(pygame_Group):
@@ -18,8 +19,10 @@ class Group(pygame_Group):
         # Group.draw() basically just does [onto.blit(s.image, s.rect) for s...]
         super(Group, self).draw(onto)
 
+    @cython.cdivision(True)
     def collisions(self):
         cdef double xoff, yoff
+        cdef Character sprite, other, newchar
         world = self.world
         for sprite, other in combinations(self, 2):
             if collide_rect(sprite, other):
@@ -50,10 +53,11 @@ class Group(pygame_Group):
                 and sprite.spawn_refractory == 0 and other.spawn_refractory == 0:
                     sprite.energy -= 2000
                     other.energy -= 2000
-                    self.spawn_refractory = 30
-                    self.spawn_refractory = 30
+                    sprite.spawn_refractory = 30
+                    other.spawn_refractory = 30
                     newgenome = Genome.from_parents(sprite.genome, other.genome)
-                    newchar = Character.from_genome(world, newgenome)
+                    newchar = Character(world, 0)
+                    newchar.load_genome(newgenome)
                     newchar.set_midpoint_x(midpoint_x)
                     newchar.set_midpoint_y(midpoint_y)
                     newchar.gen = max(sprite.gen, other.gen) + 1

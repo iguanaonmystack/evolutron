@@ -1,7 +1,7 @@
 from sprite cimport Sprite
 
 cdef class Sprite:
-    def __init__(self):
+    def __cinit__(self):
         self.__g = {}
 
     def add_internal(self, group):
