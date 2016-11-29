@@ -104,8 +104,8 @@ class TimePopView(viewport.Viewport):
             label_xoff = 0
             for label, plots, latest, colour in (
                 ('Pop', self.pop_plots, pop, (255, 255, 0)),
-                ('AvgAge', self.avgage_plots, avgage, (0, 255, 0)),
-                ('AvgGen', self.avggen_plots, avggen, (0, 255, 255))):
+                ('AvAge', self.avgage_plots, avgage, (0, 255, 0)),
+                ('AvGen', self.avggen_plots, avggen, (0, 255, 255))):
                 plots.append(latest)
                 if len(plots) > 150:
                     plots.popleft()
@@ -117,7 +117,7 @@ class TimePopView(viewport.Viewport):
                     start = (x, y)
                     end = (x, y + 2)
                     pygame.draw.line(self.canvas, colour, start, end, width)
-                text = self.font.render('%s: %d'%(label, latest), False, colour)
+                text = self.font.render('%s:%d'%(label, latest), False, colour)
                 rect = text.get_rect()
                 self.canvas.blit(text, (label_xoff, 0))
                 label_xoff += rect.w + 3

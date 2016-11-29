@@ -152,10 +152,8 @@ cdef class Character(Sprite):
 
         # Physical properties
         self.r = radius   # radius, m
-        self.x = -1 # x coord, m
-        self.y = -1 # y coord, m
-        self.prev_x = -1 # 
-        self.prev_y = -1 # temporary while I sort out collisions
+        self.midx = -1
+        self.midy = -1 # floating point coords, middle of creature
         self.height = 0.5 # used for vision
         self.created = 0 # age of world
         self.tile = None # set in update()
@@ -176,7 +174,7 @@ cdef class Character(Sprite):
         # Drawing
         if world:
             self.created = world.age
-            self.image = pygame.Surface((self.r * 2 + 4, self.r * 2 + 4), SRCALPHA).convert_alpha()
+            self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
             self.redraw = True # ignored in Character
 
@@ -202,6 +200,10 @@ cdef class Character(Sprite):
         return self
 
     cdef void load_genome(Character self, object genome):
+        self.r = genome.radius
+        if self.world is not None:
+            self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
+            self.rect = self.image.get_rect()
         num_hidden_neurons = genome.hidden_neurons
         input_weights = []
         output_weights = []
@@ -236,32 +238,29 @@ cdef class Character(Sprite):
         self.brain = Brain(input_weights, output_weights)
         self.genome = genome
 
-    def _draw_border(self, colour):
+    cdef void _draw_border(self, colour):
         pygame.draw.lines(self.image, colour, 1, [
             (0, 0), (self.rect.w - 1, 0), (self.rect.w - 1, self.rect.h - 1), (0, self.rect.h - 1)
         ], 3)
 
     def draw(self):
-        self.rect.x = self.x
-        self.rect.y = self.y
-
         if self.world.active_item is not self:
             self._draw_border((0, 0, 0, 0))
 
-        r_r = (self.r + 2, self.r + 2)
+        r_r = (self.r, self.r)
         liveness = int(min(1.0, (self.energy / 6000.) + 0.5) * 255)
         if self.parents == 1:
-            pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r + 2, 0)
+            pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r, 0)
         elif self.parents == 0:
-            pygame.draw.circle(self.image, (128, 128, 128), r_r, self.r + 2, 0)
+            pygame.draw.circle(self.image, (128, 128, 128), r_r, self.r, 0)
         else:
-            pygame.draw.circle(self.image, (0, 0, 0), r_r, self.r + 2, 0)
-        pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r, 0)
+            pygame.draw.circle(self.image, (0, 0, 0), r_r, self.r, 0)
+        pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r - 2, 0)
         
         # eyes
         eye_pos = list(r_r)
-        eye_pos[0] += int((self.r - 5) * sin(self.angle - 0.15))
-        eye_pos[1] -= int((self.r - 5) * cos(self.angle - 0.15))
+        eye_pos[0] += int((self.r - 5) * sin(self.angle - 0.2))
+        eye_pos[1] -= int((self.r - 5) * cos(self.angle - 0.2))
         pygame.draw.circle(
             self.image,
             (255 * self.vision_left ** 0.3, 0, 0),
@@ -270,8 +269,8 @@ cdef class Character(Sprite):
             0)
 
         eye_pos = list(r_r)
-        eye_pos[0] += int((self.r - 5) * sin(self.angle + 0.15))
-        eye_pos[1] -= int((self.r - 5) * cos(self.angle + 0.15))
+        eye_pos[0] += int((self.r - 5) * sin(self.angle + 0.2))
+        eye_pos[1] -= int((self.r - 5) * cos(self.angle + 0.2))
         pygame.draw.circle(
             self.image,
             (255 * self.vision_right ** 0.3, 0, 0),
@@ -329,7 +328,7 @@ cdef class Character(Sprite):
         world = self.world
 
         # observing world
-        tile_coord = self.x // world.tile_w, self.y // world.tile_h 
+        tile_coord = self.midx // world.tile_w, self.midy // world.tile_h 
         try:
             tile = world.alltiles_coords[tile_coord]
         except KeyError:
@@ -352,20 +351,20 @@ cdef class Character(Sprite):
 
         # vision triangle
         cdef int vr = 50
-        self._vision_start_x = <int>self.x + self.r + 2
-        self._vision_start_y = <int>self.y + self.r + 2
+        self._vision_start_x = <int>self.midx
+        self._vision_start_y = <int>self.midy
         self._vision_left_end_x = <int>(
-            self._vision_start_x + (vr * sin(self.angle - 0.3)))
+            self._vision_start_x + (vr * sin(self.angle - 0.4)))
         self._vision_left_end_y = <int>(
-            self._vision_start_y - (vr * cos(self.angle - 0.3)))
+            self._vision_start_y - (vr * cos(self.angle - 0.4)))
         self._vision_middle_end_x = <int>(
             self._vision_start_x + (vr * sin(self.angle)))
         self._vision_middle_end_y = <int>(
             self._vision_start_y - (vr * cos(self.angle)))
         self._vision_right_end_x = <int>(
-            self._vision_start_x + (vr * sin(self.angle + 0.3)))
+            self._vision_start_x + (vr * sin(self.angle + 0.4)))
         self._vision_right_end_y = <int>(
-            self._vision_start_y - (vr * cos(self.angle + 0.3)))
+            self._vision_start_y - (vr * cos(self.angle + 0.4)))
 
         # age:
         self.age += 1
@@ -413,22 +412,8 @@ cdef class Character(Sprite):
             return
 
         # asexual reproduction:
-        cdef Character newchar
-        if self.spawn > 0.5 and self.energy > 4000 and self.spawn_refractory == 0:
-            self.energy -= 4000
-            self.spawn_refractory = 60
-            newgenome = self.genome.mutate()
-            newchar = Character(world, 0)
-            newchar.load_genome(newgenome)
-            newchar.x = self.x
-            newchar.rect.x = self.rect.x
-            newchar.y = self.y
-            newchar.rect.y = self.rect.y
-            newchar.gen = self.gen + 1
-            newchar.parents = 1
-            newchar.energy = 3000
-            self.children += 1
-            world.allcharacters.add(newchar)
+        if self.spawn > 0.5 and self.energy > 5000 and self.spawn_refractory == 0:
+            self.spawn_asex()
 
         if self.spawn_refractory > 0:
             self.spawn_refractory -= 1
@@ -436,29 +421,26 @@ cdef class Character(Sprite):
         # movement:
         Ffriction = self.speed / 4
         acceleration = (Fmove - Ffriction) / (self.r)
-        self.prev_x, self.prev_y = self.x, self.y
         self.speed += acceleration
         cdef double ddist = self.speed
         cdef int canvas_w = world.canvas_w
         cdef int canvas_h = world.canvas_h
         self.angle = (self.angle + angle_change) % 6.283185307179586
-        x = self.x + (ddist * sin(self.angle))
-        y = self.y - (ddist * cos(self.angle))
-        self.x = double_min(double_max(0, x), canvas_w - 2 * self.r)
-        self.y = double_min(double_max(0, y), canvas_h - 2 * self.r)
+        x = self.midx + (ddist * sin(self.angle))
+        y = self.midy - (ddist * cos(self.angle))
+        self.set_midpoint_x(double_min(double_max(self.r, x), canvas_w - self.r))
+        self.set_midpoint_y(double_min(double_max(self.r, y), canvas_h - self.r))
         collided = []
         for tile in check_tiles:
             collided.extend(pygame.sprite.spritecollide(self, tile.alltrees, 0))
         cdef double midpoint_x, midpoint_y
-        for item in collided:
-            midpoint_x = (self.x + item.rect.x) / 2
-            midpoint_y = (self.y + item.rect.y) / 2
-            if midpoint_x != self.x:
-                self.x += 10. / (self.x - midpoint_x)
-            if midpoint_y != self.y:
-                self.y += 10. / (self.y - midpoint_y)
-            self.rect.x = self.x
-            self.rect.y = self.x
+        for tree in collided:
+            midpoint_x = (self.midx + tree.midx) / 2
+            midpoint_y = (self.midy + tree.midy) / 2
+            if midpoint_x != self.midx:
+                self.set_midpoint_x(self.midx + 10 / (self.midx - midpoint_x))
+            if midpoint_y != self.midy:
+                self.set_midpoint_y(self.midy + 10 / (self.midy - midpoint_y))
 
             self.speed = 0
             self.haptic = 1
@@ -466,24 +448,31 @@ cdef class Character(Sprite):
         else:
             self.haptic = 0 # may still be updated by Group.collisions()
     
-    cdef void set_midpoint_x(self, double x):
-        x = x - 2 - self.r
-        self.x = x
-        self.rect.x = x
+    cpdef void spawn_asex(self):
+        cdef Character newchar
+        self.energy -= 5000
+        self.spawn_refractory = 60
+        newgenome = self.genome.mutate()
+        newchar = Character(self.world, 0)
+        newchar.load_genome(newgenome)
+        newchar.set_midpoint_x(self.midx)
+        newchar.set_midpoint_y(self.midy)
+        newchar.gen = self.gen + 1
+        newchar.parents = 1
+        newchar.energy = 4000
+        self.children += 1
+        self.world.allcharacters.add(newchar)
 
-    cdef void set_midpoint_y(self, double y):
-        y = y - 2 - self.r
-        self.y = y
-        self.rect.y = y
+    cpdef void set_midpoint_x(self, double x):
+        self.midx = x
+        self.rect.x = x - 2 - self.r
 
-    cdef double midpoint_x(self):
-        return self.x + 2 + self.r
-    
-    cdef double midpoint_y(self):
-        return self.y + 2 + self.r
+    cpdef void set_midpoint_y(self, double y):
+        self.midy = y
+        self.rect.y = y - 2 - self.r
 
     def __repr__(self):
-        return '<Char at {},{}>'.format(self.x, self.y)
+        return '<Char at {},{}>'.format(self.rect.x, self.rect.y)
 
     def __str__(self):
         return '\n'.join([
@@ -496,15 +485,15 @@ cdef class Character(Sprite):
             "angle: %.2f radians" % self.angle,
             "speed: %.2fm/t" % self.speed,
             "children: %s" % self.children,
-            "x: %dm E" % self.x,
-            "y: %dm S" % self.y,
+            "x: %dm E" % self.midx,
+            "y: %dm S" % self.midy,
         ])
 
     def dump(self):
         obj = {
             'r': self.r,
-            'x': self.x,
-            'y': self.y,
+            'x': self.rect.x,
+            'y': self.rect.y,
             'created': self.created,
             'angle': self.angle,
             'speed': self.speed,
@@ -522,8 +511,8 @@ cdef class Character(Sprite):
     @classmethod
     def load(cls, obj):
         self = cls(None, obj['r'])
-        self.x = obj['x']
-        self.y = obj['y']
+        self.rect.x = obj['x']
+        self.rect.y = obj['y']
         self.created = obj['created']
         self.angle = obj['angle']
         self.speed = obj['speed']

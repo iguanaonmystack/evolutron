@@ -29,10 +29,8 @@ cdef class Character(sprite.Sprite):
     cdef int _vision_right_end_x, _vision_right_end_y
 
     cdef public int r
-    cdef public double x
-    cdef public double y
-    cdef public double prev_x
-    cdef public double prev_y
+    cdef readonly double midx
+    cdef readonly double midy
     cdef public double height
     cdef public int created
     cdef public object tile
@@ -54,8 +52,8 @@ cdef class Character(sprite.Sprite):
 
     cdef inline void interactions(self, group)
     cdef void load_genome(Character self, object genome)
-    cdef void set_midpoint_x(self, double x)
-    cdef void set_midpoint_y(self, double y)
-    cdef double midpoint_x(self)
-    cdef double midpoint_y(self)
+    cdef void _draw_border(self, colour)
+    cpdef void set_midpoint_x(self, double x)
+    cpdef void set_midpoint_y(self, double y)
     cpdef void die(self)
+    cpdef void spawn_asex(self)

@@ -10,10 +10,12 @@ class Tree(pygame.sprite.Sprite):
         self.r = r
         
         rr = r + r
-        self.image = pygame.Surface((rr + 4, rr + 4), SRCALPHA).convert_alpha()
+        self.image = pygame.Surface((rr, rr), SRCALPHA).convert_alpha()
         self.rect = self.image.get_rect()
-        self.rect.x = tile.rect.x + x - r
-        self.rect.y = tile.rect.y + y - r
+        self.midx = tile.rect.x + x
+        self.midy = tile.rect.y + y
+        self.rect.x = self.midx - r
+        self.rect.y = self.midy - r
         self.r_r = (r, r)
         self.intersect_lines = [
             ((self.rect.x, self.rect.y), (self.rect.x + rr, self.rect.y + rr)),

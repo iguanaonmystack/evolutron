@@ -16,8 +16,8 @@ class Genome(object):
     @classmethod
     def from_random(cls, inputs, outputs):
         self = cls(inputs, outputs)
-        self.radius = random.randint(6, 20)
-        self.hidden_neurons = random.randint(2, 7)
+        self.radius = random.randint(7, 20)
+        self.hidden_neurons = random.randint(3, 7)
 
         # For each hidden neuron, generate the weight for each input and for
         # each output
@@ -30,18 +30,18 @@ class Genome(object):
         assert len(self.output_weights) == self.hidden_neurons * self._outputs
         return self
 
-    def _mutate_single(self, value, rate, min=0):
+    def _mutate_single(self, value, rate, min=None):
         r = random.random()
         if r < rate:
             value += random.random() * 2 - 1
-        if r < min:
-            r = min
+        if min is not None and value < min:
+            value = min
         return value
 
     def mutate(self, rate=0.01):
         new = self.__class__(self._inputs, self._outputs)
-        new.radius = int(round(self._mutate_single(self.radius, rate, min=6)))
-        new.hidden_neurons = int(round(self._mutate_single(self.hidden_neurons, rate)))
+        new.radius = int(round(self._mutate_single(self.radius, rate, min=7)))
+        new.hidden_neurons = int(round(self._mutate_single(self.hidden_neurons, rate, min=3)))
         iterate_over = self.hidden_neurons
         if new.hidden_neurons < self.hidden_neurons:
             iterate_over = new.hidden_neurons
