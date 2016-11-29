@@ -8,7 +8,7 @@ import argparse
 import traceback
 
 import random
-random.seed(101)
+random.seed(102)
 
 import pygame
 from pygame.locals import *
@@ -116,6 +116,12 @@ def main():
                             with open('active-%s.json'%int(time.time()), 'w') as f:
                                 json.dump(window.world.active_item.dump(), f,
                                     sort_keys=True, indent=4)
+                    except:
+                        traceback.print_exc()
+                elif event.key == K_s:
+                    try:
+                        if window.world.active_item:
+                            window.world.active_item.spawn_asex()
                     except:
                         traceback.print_exc()
             elif event.type==VIDEORESIZE:

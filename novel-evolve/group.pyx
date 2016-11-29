@@ -26,10 +26,10 @@ class Group(pygame_Group):
         world = self.world
         for sprite, other in combinations(self, 2):
             if collide_rect(sprite, other):
-                sprite_midpoint_x = sprite.midpoint_x()
-                sprite_midpoint_y = sprite.midpoint_y()
-                other_midpoint_x = other.midpoint_x()
-                other_midpoint_y = other.midpoint_y()
+                sprite_midpoint_x = sprite.midx
+                sprite_midpoint_y = sprite.midy
+                other_midpoint_x = other.midx
+                other_midpoint_y = other.midy
                 midpoint_x = (sprite_midpoint_x + other_midpoint_x) / 2
                 midpoint_y = (sprite_midpoint_y + other_midpoint_y) / 2
 
@@ -49,10 +49,10 @@ class Group(pygame_Group):
 
                 # sexual reproduction:
                 if sprite.spawn > 0 and other.spawn > 0 \
-                and sprite.energy > 2000 and other.energy > 2000 \
+                and sprite.energy > 2500 and other.energy > 2500 \
                 and sprite.spawn_refractory == 0 and other.spawn_refractory == 0:
-                    sprite.energy -= 2000
-                    other.energy -= 2000
+                    sprite.energy -= 2500
+                    other.energy -= 2500
                     sprite.spawn_refractory = 30
                     other.spawn_refractory = 30
                     newgenome = Genome.from_parents(sprite.genome, other.genome)
@@ -62,7 +62,7 @@ class Group(pygame_Group):
                     newchar.set_midpoint_y(midpoint_y)
                     newchar.gen = max(sprite.gen, other.gen) + 1
                     newchar.parents = 2
-                    newchar.energy = 3000
+                    newchar.energy = 4000
                     sprite.children += 1
                     other.children += 1
                     world.allcharacters.add(newchar)

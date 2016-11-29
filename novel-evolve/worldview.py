@@ -41,15 +41,13 @@ class WorldView(viewport.Viewport):
 
     def _create_character(self):
         character = characters.Character.from_random(self)
-        while character.x == -1 \
+        while character.midx == -1 \
         or pygame.sprite.spritecollideany(character, self.allcharacters) \
         or pygame.sprite.spritecollideany(character, self.alltrees):
-            x = random.randint(0, self.canvas_w - character.r * 2)
-            y = random.randint(0, self.canvas_h - character.r * 2)
-            character.x = x
-            character.rect.x = x
-            character.y = y
-            character.rect.y = y
+            x = random.randint(character.r, self.canvas_w - character.r)
+            y = random.randint(character.r, self.canvas_h - character.r)
+            character.set_midpoint_x(x)
+            character.set_midpoint_y(y)
         self.allcharacters.add(character)
         # debugging:
         if self.active_item is None:
@@ -60,8 +58,8 @@ class WorldView(viewport.Viewport):
         self.age += 1
         while len(self.allcharacters) < MIN_CHARACTERS:
             self._create_character()
-        for group in (self.alltiles, self.allcharacters):
-            group.update()
+        self.alltiles.update()
+        self.allcharacters.update()
         self.allcharacters.collisions()
 
     def jump_to(self, item):
