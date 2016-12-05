@@ -14,7 +14,7 @@ cdef class Brain:
     cdef public object outputs
 
     cdef object process(self, double[:] inputs)
-    cdef object reprocess(self)
+    cpdef object reprocess(self)
 
 cdef class Character(sprite.Sprite):
     cdef public object world

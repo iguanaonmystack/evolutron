@@ -111,7 +111,7 @@ cdef class Brain:
             neuron.value = input_values[i]
         return self.reprocess()
 
-    cdef reprocess(self):
+    cpdef reprocess(self):
         for neuron in self.hidden0:
             neuron.process(self.inputs)
         for output in self.outputs:
@@ -511,8 +511,9 @@ cdef class Character(Sprite):
     @classmethod
     def load(cls, obj):
         self = cls(None, obj['r'])
-        self.rect.x = obj['x']
-        self.rect.y = obj['y']
+        if self.rect is not None:
+            self.rect.x = obj['x']
+            self.rect.y = obj['y']
         self.created = obj['created']
         self.angle = obj['angle']
         self.speed = obj['speed']

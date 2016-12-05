@@ -79,6 +79,7 @@ class InspectWindow(object):
 def main(args):
     '''args -- parsed ArgumentParser Namespace from real main()'''
     savedata = json.load(open(args.inspect))
+    print(savedata)
     character = characters.Character.load(savedata)
 
     screen = pygame.display.set_mode((1280, 720))
