@@ -4,6 +4,7 @@ cdef extern from "errno.h":
  
 from cpython cimport array
 import pygame
+from pygame import Rect
 
 from sprite cimport Sprite
 from neuron cimport Neuron
@@ -45,22 +46,24 @@ cdef class Neuron(Sprite):
         self.raw_value = raw_value
         self.value = self.fn(self.raw_value)
 
-    def connect_viewport(self, viewport):
-        self.image = pygame.Surface((40, 40), pygame.locals.SRCALPHA).convert_alpha()
+    def connect_viewport(self, viewport, neuron_width, neuron_height, neuron_centre):
+        self.image = pygame.Surface((neuron_width, neuron_height), pygame.locals.SRCALPHA).convert_alpha()
         self.rect = self.image.get_rect()
+        self.rect.x = neuron_centre[0] - neuron_width // 2
+        self.rect.y = neuron_centre[1] - neuron_height // 2
         self.font = pygame.font.Font(None, 18)
         self.viewport = viewport
 
     def draw(self):
-        centrepos = (20, 20)
         colour = 128, 255, 128
         if self.viewport.active_item is self:
             colour = 0, 255, 0
-        pygame.draw.circle(self.image, colour, centrepos, 20, 0)
+        rect = Rect(0, 0, self.rect.w, self.rect.h)
+        pygame.draw.ellipse(self.image, colour, rect, 0)
         text = self.font.render(
             str(self.value and '%0.1f'%self.value), True, (0, 0, 0))
-        rect = text.get_rect()
-        textpos = centrepos[0] - rect.w // 2, centrepos[1] - rect.h // 2
+        textrect = text.get_rect()
+        textpos = (self.rect.w // 2) - (textrect.w // 2), (self.rect.h // 2) - (textrect.h // 2)
 
         self.image.blit(text, textpos)
 

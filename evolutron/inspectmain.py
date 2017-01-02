@@ -19,7 +19,7 @@ class InspectWindow(object):
         self.allsprites = group.Group()
         
         self.brainview = brainview.BrainView(
-            self, Rect(400, 0, 600, 1000), (200, 100))
+            self, Rect(400, 0, 600, 1000))
         self.brainview.brain = character.brain
         self.allsprites.add(self.brainview)
         

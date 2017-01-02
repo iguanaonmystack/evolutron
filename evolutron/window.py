@@ -23,12 +23,12 @@ class Window(object):
             self, Rect(200, 0, screen_w - 200, screen_h), world_w, world_h)
         self.allsprites.add(self.world)
 
-        self.infopane = infopane.InfoPane(self, Rect(0, 0, 200, 150))
+        self.infopane = infopane.InfoPane(self, Rect(0, 0, 200, 50))
         self.allsprites.add(self.infopane)
 
-        brainview_height = screen_h - 150 - 150 - 100
+        brainview_height = screen_h - 50 - 300 - 50
         self.brainview = brainview.BrainView(
-            self, Rect(0, 150, 200, brainview_height))
+            self, Rect(0, 50, 200, brainview_height))
         self.allsprites.add(self.brainview)
 
         self.genesview = popview.GenePopView(

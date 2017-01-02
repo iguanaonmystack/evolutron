@@ -84,9 +84,9 @@ class Genome(object):
         if p1.hidden_neurons > p2.hidden_neurons:
             p1, p2 = p2, p1
 
-        assert p1._inputs == 5
-        assert p2._inputs == 5
-        assert new._inputs == 5
+        assert p1._inputs == 8
+        assert p2._inputs == 8
+        assert new._inputs == 8
         for i in range(new.hidden_neurons):
             offset = new._inputs * i
             for j in range(new._inputs):

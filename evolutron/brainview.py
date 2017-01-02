@@ -8,14 +8,18 @@ import group
 
 class BrainView(viewport.Viewport):
 
-    def __init__(self, parent, viewport_rect, neuron_spacing=(75, 60)):
+    def __init__(self, parent, viewport_rect):
         super(BrainView, self).__init__(
-            parent, viewport_rect, viewport_rect.w, 1000)
+            parent, viewport_rect, viewport_rect.w, viewport_rect.h)
         self._brain = None
+        self.height = viewport_rect.h
         self.font = pygame.font.Font(None, 18)
         self.active_item = None
-        self.neuron_spacing = neuron_spacing
-    
+        self.input_labels = ('const', 'vis left', 'vis right', 'water', 'grass', 'forest', 'haptic', 'energy/10k')
+        self.neuron_spacing = (75, self.height // (len(self.input_labels) + 1))
+        self.neuron_width = 40
+        self.neuron_height = self.neuron_spacing[1] // 2
+
     @property
     def brain(self):
         return self._brain
@@ -29,15 +33,13 @@ class BrainView(viewport.Viewport):
         self.active_item = None
         for i, layer in enumerate((brain.inputs, brain.hidden0, brain.outputs)):
             for j, neuron in enumerate(layer):
-                neuron.connect_viewport(self)
                 centre = self.neuron_centre(i, j)
-                neuron.rect.x = centre[0] - neuron.rect.w // 2
-                neuron.rect.y = centre[1] - neuron.rect.h // 2
+                neuron.connect_viewport(self, self.neuron_width, self.neuron_height, self.neuron_centre(i, j))
                 self.allneurons.add(neuron)
 
     def neuron_centre(self, layer, node_index):
         return [20 + self.neuron_spacing[0] * layer,
-                40 + self.neuron_spacing[1] * node_index]
+                self.neuron_spacing[1] + self.neuron_spacing[1] * node_index]
 
     def draw(self):
         brain = self._brain
@@ -48,17 +50,16 @@ class BrainView(viewport.Viewport):
             self.image.blit(self.canvas, self.drag_offset)
             return
 
-        input_labels = ('const', 'vis left', 'vis right', 'haptic', 'energy/k')
+        input_labels = self.input_labels
         hidden_labels = ()
         output_labels = ('angle ch', 'impulse', 'spawn')
 
         for i, layer in enumerate((input_labels, hidden_labels, output_labels)):
             for j, label in enumerate(layer):
                 centrepos = self.neuron_centre(i, j)
-                centrepos[0] -= 20
-                centrepos[1] -= 30
                 text = self.font.render(label, True, (255, 255, 255))
-                self.canvas.blit(text, centrepos)
+                textrect = text.get_rect()
+                self.canvas.blit(text, (centrepos[0] - self.neuron_width // 2, centrepos[1] - self.neuron_height // 2 - textrect.h))
 
         layers = brain.inputs, brain.hidden0, brain.outputs
         for i, layer in enumerate(layers):

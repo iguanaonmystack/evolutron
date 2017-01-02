@@ -139,7 +139,7 @@ cdef class Brain:
 
 
 cdef class Character(Sprite):
-    brain_inputs = 5
+    brain_inputs = 8
     brain_outputs = 3
 
     def __cinit__(self, object world, int radius):
@@ -150,6 +150,9 @@ cdef class Character(Sprite):
         self.haptic = 0 # touching anything
         self.vision_left = 0 # Whether creature can see something
         self.vision_right = 0
+        self.on_water = 0
+        self.on_grass = 0
+        self.on_mulch = 0
 
         # Physical properties
         self.r = radius   # radius, m
@@ -327,6 +330,7 @@ cdef class Character(Sprite):
     def update(self):
         cdef int i, j
         cdef double x, y
+        cdef str terrain
 
         world = self.world
 
@@ -343,6 +347,10 @@ cdef class Character(Sprite):
                 oldtile.allcharacters.remove(self)
             tile.allcharacters.add(self)
             self.tile = tile
+            terrain = tile.tile.terrain
+            self.on_water = 1.0 if terrain == 'lake' else 0.0
+            self.on_grass = 1.0 if terrain == 'meadow' else 0.0
+            self.on_mulch = 1.0 if terrain == 'forest' else 0.0
         check_tiles = []
         for i in range(-1, 2):
             for j in range(-1, 2):
@@ -394,6 +402,9 @@ cdef class Character(Sprite):
             1,
             self.vision_left,
             self.vision_right,
+            self.on_water,
+            self.on_grass,
+            self.on_mulch,
             self.haptic,
             self.energy / 10000,
         ])

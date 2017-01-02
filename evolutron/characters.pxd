@@ -27,6 +27,9 @@ cdef class Character(sprite.Sprite):
     cdef int _vision_left_end_x, _vision_left_end_y
     cdef int _vision_middle_end_x, _vision_middle_end_y
     cdef int _vision_right_end_x, _vision_right_end_y
+    cdef public double on_water
+    cdef public double on_grass
+    cdef public double on_mulch
 
     cdef public int r
     cdef public double hue
