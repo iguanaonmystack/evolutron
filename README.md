@@ -14,7 +14,7 @@ After falling down a YouTube rabbit hole one day, I came across various evolutio
 Latest screenshot
 -----------------
 
-![Screenshot of novel-evolve](screenshots/auto.png "Screenshot of novel-evolve")
+![Screenshot of Evolutron](screenshots/auto.png "Screenshot of Evolutron")
 
 Running the simulator
 ---------------------
@@ -25,8 +25,8 @@ This is still a work in progress and this may change, but roughly:
 $ pip install pygame
 $ pip install cython
 $ git clone https://github.com/flexo/evolutron.git
-$ cd novel-evolve
-$ python novel-evolve
+$ cd evolutron
+$ python evolutron
 ```
 
 You will need Python 3.3 or higher. Sometimes this means the pip command will be called 'pip3' and the python command will be called 'python3'.
