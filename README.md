@@ -31,6 +31,15 @@ $ python evolutron
 
 You will need Python 3.3 or higher. Sometimes this means the pip command will be called 'pip3' and the python command will be called 'python3'.
 
+Troubleshooting
+---------------
+
+If you make a change and get the following error, delete ~/.pyxbld:
+
+```
+ImportError: Building module group failed: ['ValueError: ________________ has the wrong size, try recompiling. Expected ___, got ___\n']
+```
+
 License
 -------
 

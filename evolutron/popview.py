@@ -1,5 +1,6 @@
 import operator
 import collections
+import colorsys
 
 import pygame
 from pygame.locals import *
@@ -12,10 +13,10 @@ class GenePopView(viewport.Viewport):
 
     def __init__(self, parent, viewport_rect):
         super(GenePopView, self).__init__(
-            parent, viewport_rect, viewport_rect.w, 200)
-        self.font = pygame.font.Font(None, 18)
+            parent, viewport_rect, viewport_rect.w, viewport_rect.h)
+        self.height = viewport_rect.h
         self.xwidth = 2
-        self.ywidth = 1
+        self.ywidth = 2
         self.sorted_chars = []
 
     def draw(self):
@@ -26,6 +27,7 @@ class GenePopView(viewport.Viewport):
             key=operator.attrgetter('created'))
         xwidth = self.xwidth
         ywidth = self.ywidth
+        hsv_to_rgb = colorsys.hsv_to_rgb
         for character in self.sorted_chars:
             g = character.genome
             s = selected = (self.parent.world.active_item is character) * 255
@@ -37,6 +39,12 @@ class GenePopView(viewport.Viewport):
             end = (xoff, off)
             pygame.draw.line(self.canvas, (colour, colour, s or colour),
                              start, end, ywidth)
+
+            rgb = tuple(255 * val for val in hsv_to_rgb(g.hue / 100, 1.0, 1.0))
+            start = (xoff, off)
+            xoff += xwidth
+            end = (xoff, off)
+            pygame.draw.line(self.canvas, rgb, start, end, ywidth)
 
             colour = int(g.hidden_neurons / 10. * 255)
             start = (xoff, off)
@@ -69,7 +77,7 @@ class GenePopView(viewport.Viewport):
                         start, end, ywidth)
 
             off += ywidth
-            if off > 200:
+            if off > self.height:
                 break
 
         self.image.blit(self.canvas, self.drag_offset)
@@ -107,7 +115,7 @@ class TimePopView(viewport.Viewport):
                 ('AvAge', self.avgage_plots, avgage, (0, 255, 0)),
                 ('AvGen', self.avggen_plots, avggen, (0, 255, 255))):
                 plots.append(latest)
-                if len(plots) > 150:
+                if len(plots) > 100:
                     plots.popleft()
                 width = 2
                 max_ = max(plots) or 1

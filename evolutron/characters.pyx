@@ -5,6 +5,7 @@ import struct
 import random
 import operator
 import time
+from colorsys import hsv_to_rgb
 
 from cpython cimport array
 from array import array
@@ -201,6 +202,7 @@ cdef class Character(Sprite):
 
     cdef void load_genome(Character self, object genome):
         self.r = genome.radius
+        self.hue = genome.hue
         if self.world is not None:
             self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
@@ -248,14 +250,15 @@ cdef class Character(Sprite):
             self._draw_border((0, 0, 0, 0))
 
         r_r = (self.r, self.r)
-        liveness = int(min(1.0, (self.energy / 6000.) + 0.5) * 255)
+        liveness = min(1.0, (self.energy / 6000.) + 0.5)
         if self.parents == 1:
             pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r, 0)
         elif self.parents == 0:
             pygame.draw.circle(self.image, (128, 128, 128), r_r, self.r, 0)
         else:
             pygame.draw.circle(self.image, (0, 0, 0), r_r, self.r, 0)
-        pygame.draw.circle(self.image, (liveness,liveness,0), r_r, self.r - 2, 0)
+        rgb = tuple(val * 255 for val in hsv_to_rgb(self.hue/100, 0.85, liveness))
+        pygame.draw.circle(self.image, rgb, r_r, self.r - 2, 0)
         
         # eyes
         eye_pos = list(r_r)

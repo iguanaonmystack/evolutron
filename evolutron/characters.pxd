@@ -29,6 +29,7 @@ cdef class Character(sprite.Sprite):
     cdef int _vision_right_end_x, _vision_right_end_y
 
     cdef public int r
+    cdef public double hue
     cdef readonly double midx
     cdef readonly double midy
     cdef public double height

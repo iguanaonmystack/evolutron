@@ -4,6 +4,7 @@ import struct
 class Genome(object):
     def __init__(self, inputs, outputs):
         self.radius = 0
+        self.hue = 0
         self.hidden_neurons = 0
         self.hidden0_weights = []
         self.output_weights = []
@@ -17,6 +18,7 @@ class Genome(object):
     def from_random(cls, inputs, outputs):
         self = cls(inputs, outputs)
         self.radius = random.randint(7, 20)
+        self.hue = random.random() * 100
         self.hidden_neurons = random.randint(3, 7)
 
         # For each hidden neuron, generate the weight for each input and for
@@ -41,6 +43,7 @@ class Genome(object):
     def mutate(self, rate=0.01):
         new = self.__class__(self._inputs, self._outputs)
         new.radius = int(round(self._mutate_single(self.radius, rate, min=7)))
+        new.hue = self._mutate_single(self.hue, rate) % 1.0
         new.hidden_neurons = int(round(self._mutate_single(self.hidden_neurons, rate, min=3)))
         iterate_over = self.hidden_neurons
         if new.hidden_neurons < self.hidden_neurons:
@@ -73,6 +76,7 @@ class Genome(object):
     def from_parents(cls, p1, p2, rate=0.01):
         new = cls(p1._inputs, p1._outputs) # currently does not vary
         new.radius = p1.radius if random.random() < 0.5 else p2.radius
+        new.hue = p1.hue + p2.hue / 2
         new.hidden_neurons = (
             p1.hidden_neurons if random.random() < 0.5 else p2.hidden_neurons)
 
@@ -104,6 +108,7 @@ class Genome(object):
     def __str__(self):
         return 'Genome:\n  ' + '\n  '.join([str(s) for s in (
             self.radius,
+            self.hue,
             self.hidden_neurons,
             self.hidden0_weights,
             self.output_weights,
@@ -112,6 +117,7 @@ class Genome(object):
     def dump(self):
         return {
             'radius': self.radius,
+            'hue': self.hue,
             'hidden_neurons': self.hidden_neurons,
             'hidden0_weights': self.hidden0_weights,
             'output_weights': self.output_weights,
@@ -124,4 +130,4 @@ if __name__ == '__main__':
     print(g)
     for i in range(10000):
         g = g.mutate(0.01)
-    print(g)
+        print(g)

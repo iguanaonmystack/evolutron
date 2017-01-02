@@ -32,11 +32,11 @@ class Window(object):
         self.allsprites.add(self.brainview)
 
         self.genesview = popview.GenePopView(
-            self, Rect(0, screen_h - 250, 200, 150))
+            self, Rect(0, screen_h - 350, 200, 300))
         self.allsprites.add(self.genesview)
 
         self.popview = popview.TimePopView(
-            self, Rect(0, screen_h - 100, 200, 100))
+            self, Rect(0, screen_h - 50, 200, 50))
         self.allsprites.add(self.popview)
 
     def onresize(self, window_w, window_h):
