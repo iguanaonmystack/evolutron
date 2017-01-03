@@ -5,6 +5,7 @@ class Genome(object):
     def __init__(self, inputs, outputs):
         self.radius = 0
         self.hue = 0
+        self.predator = 0
         self.hidden_neurons = 0
         self.hidden0_weights = []
         self.output_weights = []
@@ -19,6 +20,7 @@ class Genome(object):
         self = cls(inputs, outputs)
         self.radius = random.randint(7, 20)
         self.hue = random.random() * 100
+        self.predator = random.random() * 2 - 1
         self.hidden_neurons = random.randint(3, 7)
 
         # For each hidden neuron, generate the weight for each input and for
@@ -44,6 +46,7 @@ class Genome(object):
         new = self.__class__(self._inputs, self._outputs)
         new.radius = int(round(self._mutate_single(self.radius, rate, min=7)))
         new.hue = self._mutate_single(self.hue, rate) % 100.0
+        new.predator = self._mutate_single(self.predator, rate)
         new.hidden_neurons = int(round(self._mutate_single(self.hidden_neurons, rate, min=3)))
         iterate_over = self.hidden_neurons
         if new.hidden_neurons < self.hidden_neurons:
@@ -77,6 +80,7 @@ class Genome(object):
         new = cls(p1._inputs, p1._outputs) # currently does not vary
         new.radius = p1.radius if random.random() < 0.5 else p2.radius
         new.hue = p1.hue + p2.hue / 2
+        new.predator = p1.predator if random.random() < 0.5 else p2.predator
         new.hidden_neurons = (
             p1.hidden_neurons if random.random() < 0.5 else p2.hidden_neurons)
 
@@ -109,6 +113,7 @@ class Genome(object):
         return 'Genome:\n  ' + '\n  '.join([str(s) for s in (
             self.radius,
             self.hue,
+            self.predator,
             self.hidden_neurons,
             self.hidden0_weights,
             self.output_weights,
@@ -118,6 +123,7 @@ class Genome(object):
         return {
             'radius': self.radius,
             'hue': self.hue,
+            'predator': self.predator,
             'hidden_neurons': self.hidden_neurons,
             'hidden0_weights': self.hidden0_weights,
             'output_weights': self.output_weights,

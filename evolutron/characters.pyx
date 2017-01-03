@@ -23,6 +23,11 @@ from neuron import identity
 
 from characters cimport Character, Brain
 
+# 2/3 PI and 4/3 PI, for triangles
+DEF EVO_2PI3 = 2.0943951023931953
+DEF EVO_4PI3 = 4.1887902047863905
+DEF EVO_TAU = 6.283185307179586
+
 # Line collision algorithm. Ref: https://stackoverflow.com/a/9997374 and 
 # http://www.bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
 cdef bint _ccw(int A_x, int A_y, int B_x, int B_y, int C_x, int C_y):
@@ -206,6 +211,7 @@ cdef class Character(Sprite):
     cdef void load_genome(Character self, object genome):
         self.r = genome.radius
         self.hue = genome.hue
+        self.predator = genome.predator # ATTN: float [-1, +1] not bool
         if self.world is not None:
             self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
@@ -249,24 +255,53 @@ cdef class Character(Sprite):
         ], 3)
 
     def draw(self):
-        if self.world.active_item is not self:
-            self._draw_border((0, 0, 0, 0))
+        cdef double angle = self.angle
+        cdef int r = self.r
+        cdef rsub2 = r - 2
 
-        r_r = (self.r, self.r)
         liveness = min(1.0, (self.energy / 6000.) + 0.5)
-        if self.parents == 1:
-            pygame.draw.circle(self.image, (255, 255, 255), r_r, self.r, 0)
-        elif self.parents == 0:
-            pygame.draw.circle(self.image, (128, 128, 128), r_r, self.r, 0)
-        else:
-            pygame.draw.circle(self.image, (0, 0, 0), r_r, self.r, 0)
         rgb = tuple(val * 255 for val in hsv_to_rgb(self.hue/100, 0.85, liveness))
-        pygame.draw.circle(self.image, rgb, r_r, self.r - 2, 0)
+        r_r = (self.r, self.r)
+        if self.parents == 1:
+            outline_rgb = (255, 255, 255)
+        elif self.parents == 0:
+            outline_rgb = (128, 128, 128)
+        else:
+            outline_rgb = (0, 0, 0)
+        if self.predator > 0:
+            self.image.fill((0, 0, 0, 0))
+            pygame.draw.polygon(self.image, outline_rgb, [
+                (
+                    r + r * sin(angle),
+                    r - r * cos(angle)),
+                (
+                    r + r * sin((angle + EVO_2PI3) % EVO_TAU),
+                    r - r * cos((angle + EVO_2PI3) % EVO_TAU)),
+                (
+                    r + r * sin((angle + EVO_4PI3) % EVO_TAU),
+                    r - r * cos((angle + EVO_4PI3) % EVO_TAU)),
+            ], 0)
+            pygame.draw.polygon(self.image, rgb, [
+                (
+                    r + rsub2 * sin(angle),
+                    r - rsub2 * cos(angle)),
+                (
+                    r + rsub2 * sin((angle + EVO_2PI3) % EVO_TAU),
+                    r - rsub2 * cos((angle + EVO_2PI3) % EVO_TAU)),
+                (
+                    r + rsub2 * sin((angle + EVO_4PI3) % EVO_TAU),
+                    r - rsub2 * cos((angle + EVO_4PI3) % EVO_TAU)),
+            ], 0)
+        else:
+            if self.world.active_item is not self:
+                self._draw_border((0, 0, 0, 0))
+            pygame.draw.circle(self.image, outline_rgb, r_r, self.r, 0)
+            pygame.draw.circle(self.image, rgb, r_r, rsub2, 0)
         
         # eyes
         eye_pos = list(r_r)
-        eye_pos[0] += int((self.r - 5) * sin(self.angle - 0.2))
-        eye_pos[1] -= int((self.r - 5) * cos(self.angle - 0.2))
+        eye_pos[0] += int((r - 5) * sin(angle - 0.2))
+        eye_pos[1] -= int((r - 5) * cos(angle - 0.2))
         pygame.draw.circle(
             self.image,
             (255 * self.vision_left ** 0.3, 0, 0),
@@ -275,8 +310,8 @@ cdef class Character(Sprite):
             0)
 
         eye_pos = list(r_r)
-        eye_pos[0] += int((self.r - 5) * sin(self.angle + 0.2))
-        eye_pos[1] -= int((self.r - 5) * cos(self.angle + 0.2))
+        eye_pos[0] += int((r - 5) * sin(angle + 0.2))
+        eye_pos[1] -= int((r - 5) * cos(angle + 0.2))
         pygame.draw.circle(
             self.image,
             (255 * self.vision_right ** 0.3, 0, 0),

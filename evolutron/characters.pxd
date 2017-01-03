@@ -33,6 +33,7 @@ cdef class Character(sprite.Sprite):
 
     cdef public int r
     cdef public double hue
+    cdef public double predator
     cdef readonly double midx
     cdef readonly double midy
     cdef public double height
