@@ -43,7 +43,7 @@ class Genome(object):
     def mutate(self, rate=0.01):
         new = self.__class__(self._inputs, self._outputs)
         new.radius = int(round(self._mutate_single(self.radius, rate, min=7)))
-        new.hue = self._mutate_single(self.hue, rate) % 1.0
+        new.hue = self._mutate_single(self.hue, rate) % 100.0
         new.hidden_neurons = int(round(self._mutate_single(self.hidden_neurons, rate, min=3)))
         iterate_over = self.hidden_neurons
         if new.hidden_neurons < self.hidden_neurons:
