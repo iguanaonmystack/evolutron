@@ -33,7 +33,7 @@ class GenePopView(viewport.Viewport):
             s = selected = (self.parent.world.active_item is character) * 255
             xoff = 0
 
-            colour = int(g.radius / 30. * 255)
+            colour = int(g.size / 30. * 255)
             start = (xoff, off)
             xoff += xwidth
             end = (xoff, off)

@@ -147,7 +147,7 @@ cdef class Character(Sprite):
     brain_inputs = 8
     brain_outputs = 3
 
-    def __cinit__(self, object world, int radius):
+    def __cinit__(self, object world):
         self.world = world
         self.genome = None
 
@@ -160,7 +160,9 @@ cdef class Character(Sprite):
         self.on_mulch = 0
 
         # Physical properties
-        self.r = radius   # radius, m
+        self.mass = 0 # mass, kg
+        self.r = 0   # radius, m
+        self.predator = False # boolean
         self.midx = -1
         self.midy = -1 # floating point coords, middle of creature
         self.height = 0.5 # used for vision
@@ -180,12 +182,8 @@ cdef class Character(Sprite):
 
         self.brain = None
 
-        # Drawing
         if world:
             self.created = world.age
-            self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
-            self.rect = self.image.get_rect()
-            self.redraw = True # ignored in Character
 
     @property
     def intersect_lines(self):
@@ -204,17 +202,24 @@ cdef class Character(Sprite):
 
     @classmethod
     def from_genome(cls, world, genome):
-        self = Character(world, genome.radius)
+        self = Character(world)
         self.load_genome(genome)
         return self
 
     cdef void load_genome(Character self, object genome):
-        self.r = genome.radius
+        self.mass = genome.size
         self.hue = genome.hue
-        self.predator = genome.predator # ATTN: float [-1, +1] not bool
+        self.predator = genome.predator > 0
+
+        # Triangles take up half the space of circles within the square
+        # bounding box, so multiply accordingly. (sqrt because this is one
+        # dimension of two)
+        self.r = <int>(self.mass * (1.414 if self.predator else 1))
+    
         if self.world is not None:
             self.image = pygame.Surface((self.r * 2, self.r * 2), SRCALPHA).convert_alpha()
             self.rect = self.image.get_rect()
+            self.redraw = True # currently ignored in Character
         num_hidden_neurons = genome.hidden_neurons
         input_weights = []
         output_weights = []
@@ -257,7 +262,8 @@ cdef class Character(Sprite):
     def draw(self):
         cdef double angle = self.angle
         cdef int r = self.r
-        cdef rsub2 = r - 2
+        cdef int rsub2 = r - 2
+        cdef int rsub3 = r - 3
 
         liveness = min(1.0, (self.energy / 6000.) + 0.5)
         rgb = tuple(val * 255 for val in hsv_to_rgb(self.hue/100, 0.85, liveness))
@@ -283,14 +289,14 @@ cdef class Character(Sprite):
             ], 0)
             pygame.draw.polygon(self.image, rgb, [
                 (
-                    r + rsub2 * sin(angle),
-                    r - rsub2 * cos(angle)),
+                    r + rsub3 * sin(angle),
+                    r - rsub3 * cos(angle)),
                 (
-                    r + rsub2 * sin((angle + EVO_2PI3) % EVO_TAU),
-                    r - rsub2 * cos((angle + EVO_2PI3) % EVO_TAU)),
+                    r + rsub3 * sin((angle + EVO_2PI3) % EVO_TAU),
+                    r - rsub3 * cos((angle + EVO_2PI3) % EVO_TAU)),
                 (
-                    r + rsub2 * sin((angle + EVO_4PI3) % EVO_TAU),
-                    r - rsub2 * cos((angle + EVO_4PI3) % EVO_TAU)),
+                    r + rsub3 * sin((angle + EVO_4PI3) % EVO_TAU),
+                    r - rsub3 * cos((angle + EVO_4PI3) % EVO_TAU)),
             ], 0)
         else:
             if self.world.active_item is not self:
@@ -469,7 +475,7 @@ cdef class Character(Sprite):
 
         # movement:
         Ffriction = self.speed / 4
-        acceleration = (Fmove - Ffriction) / (self.r)
+        acceleration = (Fmove - Ffriction) / (self.mass)
         self.speed += acceleration
         cdef double ddist = self.speed
         cdef int canvas_w = world.canvas_w
@@ -502,7 +508,7 @@ cdef class Character(Sprite):
         self.energy -= 5000
         self.spawn_refractory = 60
         newgenome = self.genome.mutate()
-        newchar = Character(self.world, 0)
+        newchar = Character(self.world)
         newchar.load_genome(newgenome)
         newchar.set_midpoint_x(self.midx)
         newchar.set_midpoint_y(self.midy)
@@ -525,12 +531,13 @@ cdef class Character(Sprite):
 
     def __str__(self):
         return '\n'.join([
-            "Character:",
+            "Character (%s):" % (self.predator and 'predator' or 'prey'),
             "created at: %dt" % self.created,
             "age: %dt" % self.age,
             "generation: %d" % self.gen,
             "energy: %.2fJ" % self.energy,
             "r: %dm" % self.r,
+            "mass: %dkg" % self.mass,
             "angle: %.2f radians" % self.angle,
             "speed: %.2fm/t" % self.speed,
             "children: %s" % self.children,

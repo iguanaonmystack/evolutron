@@ -31,9 +31,10 @@ cdef class Character(sprite.Sprite):
     cdef public double on_grass
     cdef public double on_mulch
 
+    cdef public int mass
     cdef public int r
     cdef public double hue
-    cdef public double predator
+    cdef public bint predator
     cdef readonly double midx
     cdef readonly double midy
     cdef public double height

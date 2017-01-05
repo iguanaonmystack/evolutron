@@ -56,7 +56,7 @@ class Group(pygame_Group):
                     sprite.spawn_refractory = 30
                     other.spawn_refractory = 30
                     newgenome = Genome.from_parents(sprite.genome, other.genome)
-                    newchar = Character(world, 0)
+                    newchar = Character(world)
                     newchar.load_genome(newgenome)
                     newchar.set_midpoint_x(midpoint_x)
                     newchar.set_midpoint_y(midpoint_y)

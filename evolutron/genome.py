@@ -3,7 +3,7 @@ import struct
 
 class Genome(object):
     def __init__(self, inputs, outputs):
-        self.radius = 0
+        self.size = 0
         self.hue = 0
         self.predator = 0
         self.hidden_neurons = 0
@@ -18,7 +18,7 @@ class Genome(object):
     @classmethod
     def from_random(cls, inputs, outputs):
         self = cls(inputs, outputs)
-        self.radius = random.randint(7, 20)
+        self.size = random.randint(7, 20)
         self.hue = random.random() * 100
         self.predator = random.random() * 2 - 1
         self.hidden_neurons = random.randint(3, 7)
@@ -44,7 +44,7 @@ class Genome(object):
 
     def mutate(self, rate=0.01):
         new = self.__class__(self._inputs, self._outputs)
-        new.radius = int(round(self._mutate_single(self.radius, rate, min=7)))
+        new.size = int(round(self._mutate_single(self.size, rate, min=7)))
         new.hue = self._mutate_single(self.hue, rate) % 100.0
         new.predator = self._mutate_single(self.predator, rate)
         new.hidden_neurons = int(round(self._mutate_single(self.hidden_neurons, rate, min=3)))
@@ -78,7 +78,7 @@ class Genome(object):
     @classmethod
     def from_parents(cls, p1, p2, rate=0.01):
         new = cls(p1._inputs, p1._outputs) # currently does not vary
-        new.radius = p1.radius if random.random() < 0.5 else p2.radius
+        new.size = p1.size if random.random() < 0.5 else p2.size
         new.hue = p1.hue + p2.hue / 2
         new.predator = p1.predator if random.random() < 0.5 else p2.predator
         new.hidden_neurons = (
@@ -111,7 +111,7 @@ class Genome(object):
 
     def __str__(self):
         return 'Genome:\n  ' + '\n  '.join([str(s) for s in (
-            self.radius,
+            self.size,
             self.hue,
             self.predator,
             self.hidden_neurons,
@@ -121,7 +121,7 @@ class Genome(object):
     
     def dump(self):
         return {
-            'radius': self.radius,
+            'size': self.size,
             'hue': self.hue,
             'predator': self.predator,
             'hidden_neurons': self.hidden_neurons,
