@@ -163,6 +163,7 @@ cdef class Character(Sprite):
         self.mass = 0 # mass, kg
         self.r = 0   # radius, m
         self.predator = False # boolean
+        self.foodchain = False # eating or in the process of being eaten.
         self.midx = -1
         self.midy = -1 # floating point coords, middle of creature
         self.height = 0.5 # used for vision
@@ -268,7 +269,9 @@ cdef class Character(Sprite):
         liveness = min(1.0, (self.energy / 6000.) + 0.5)
         rgb = tuple(val * 255 for val in hsv_to_rgb(self.hue/100, 0.85, liveness))
         r_r = (self.r, self.r)
-        if self.parents == 1:
+        if self.foodchain:
+            outline_rgb = (255, 0, 0)
+        elif self.parents == 1:
             outline_rgb = (255, 255, 255)
         elif self.parents == 0:
             outline_rgb = (128, 128, 128)
@@ -425,8 +428,10 @@ cdef class Character(Sprite):
         foods = []
         self.vision_left = 0
         self.vision_right = 0
+        self.foodchain = False
         for tile in check_tiles:
-            foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
+            if not self.predator:
+                foods.extend(pygame.sprite.spritecollide(self, tile.allfood, 0))
             self.interactions(tile.allfood)
             self.interactions(tile.alltrees)
             self.interactions(tile.allcharacters)
@@ -460,8 +465,11 @@ cdef class Character(Sprite):
         # compensate values from NN
         angle_change /= 2
 
-        Fmove = fabs(Fmove)
-        self.energy -= Fmove * 5 + 10
+        if Fmove > 0:
+            self.energy -= Fmove * 5 + 10
+        else:
+            # Make moving backwards possible, but harder.
+            self.energy += Fmove * 10 - 10
         if self.energy <= 0:
             self.die()
             return

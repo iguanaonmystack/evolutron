@@ -35,6 +35,49 @@ class Genome(object):
         return self
 
 
+    def mutate(self, rate=0.01):
+        new = self.__class__(self._inputs, self._outputs)
+        new.size = int(round(self._mutate_single(self.size, rate, min=7)))
+        new.hue = self._mutate_single(self.hue, rate) % 100.0
+        new.predator = self._mutate_single(self.predator, rate)
+        new.hidden_neurons = int(round(self._mutate_single(self.hidden_neurons, rate, min=3)))
+        iterate_over = self.hidden_neurons
+        if new.hidden_neurons < self.hidden_neurons:
+            iterate_over = new.hidden_neurons
+        i = 0
+        for i in range(iterate_over):
+            offset = self._inputs * i
+            for j in range(self._inputs):
+                new.hidden0_weights.append(
+                    self._mutate_single(self.hidden0_weights[offset + j], rate))
+            offset = self._outputs * i
+            for j in range(self._outputs):
+                new.output_weights.append(
+                    self._mutate_single(self.output_weights[offset + j], rate))
+        while i < new.hidden_neurons - 1:
+            # the genome mutated to desire more hidden neurons
+            # so add random numbers to increase the weight part of the genome
+            for j in range(self._inputs):
+                new.hidden0_weights.append(random.random() * 2 - 1) 
+            for j in range(self._outputs):
+                new.output_weights.append(random.random() * 2 - 1) 
+            i += 1
+        assert len(new.hidden0_weights) == new.hidden_neurons * new._inputs, \
+            '%s %s %s'%(len(new.hidden0_weights), new.hidden_neurons, new._inputs)
+        assert len(new.output_weights) == new.hidden_neurons * new._outputs, \
+            '%s %s %s'%(len(new.output_weights), new.hidden_neurons, new._outputs)
+        return new
+
+
+    def _mutate_single(self, value, rate, min=None):
+        r = random.random()
+        if r < rate:
+            value += random.random() * 2 - 1
+        if min is not None and value < min:
+            value = min
+        return value
+
+
     @classmethod
     def from_parents(cls, p1, p2, rate=0.01):
         new = cls(p1._inputs, p1._outputs) # currently does not vary
@@ -70,47 +113,6 @@ class Genome(object):
         return new
 
 
-    def _mutate_single(self, value, rate, min=None):
-        r = random.random()
-        if r < rate:
-            value += random.random() * 2 - 1
-        if min is not None and value < min:
-            value = min
-        return value
-
-    def mutate(self, rate=0.01):
-        new = self.__class__(self._inputs, self._outputs)
-        new.size = int(round(self._mutate_single(self.size, rate, min=7)))
-        new.hue = self._mutate_single(self.hue, rate) % 100.0
-        new.predator = self._mutate_single(self.predator, rate)
-        new.hidden_neurons = int(round(self._mutate_single(self.hidden_neurons, rate, min=3)))
-        iterate_over = self.hidden_neurons
-        if new.hidden_neurons < self.hidden_neurons:
-            iterate_over = new.hidden_neurons
-        i = 0
-        for i in range(iterate_over):
-            offset = self._inputs * i
-            for j in range(self._inputs):
-                new.hidden0_weights.append(
-                    self._mutate_single(self.hidden0_weights[offset + j], rate))
-            offset = self._outputs * i
-            for j in range(self._outputs):
-                new.output_weights.append(
-                    self._mutate_single(self.output_weights[offset + j], rate))
-        while i < new.hidden_neurons - 1:
-            # the genome mutated to desire more hidden neurons
-            # so add random numbers to increase the weight part of the genome
-            for j in range(self._inputs):
-                new.hidden0_weights.append(random.random() * 2 - 1) 
-            for j in range(self._outputs):
-                new.output_weights.append(random.random() * 2 - 1) 
-            i += 1
-        assert len(new.hidden0_weights) == new.hidden_neurons * new._inputs, \
-            '%s %s %s'%(len(new.hidden0_weights), new.hidden_neurons, new._inputs)
-        assert len(new.output_weights) == new.hidden_neurons * new._outputs, \
-            '%s %s %s'%(len(new.output_weights), new.hidden_neurons, new._outputs)
-        return new
-
     def __str__(self):
         return 'Genome:\n  ' + '\n  '.join([str(s) for s in (
             self.size,
@@ -120,6 +122,7 @@ class Genome(object):
             self.hidden0_weights,
             self.output_weights,
         )])
+
     
     def dump(self):
         return {

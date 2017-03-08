@@ -22,7 +22,7 @@ class Group(pygame_Group):
     @cython.cdivision(True)
     def collisions(self):
         cdef double xoff, yoff
-        cdef Character sprite, other, newchar
+        cdef Character sprite, other, newchar, predator, prey
         world = self.world
         for sprite, other in combinations(self, 2):
             if collide_rect(sprite, other):
@@ -47,24 +47,42 @@ class Group(pygame_Group):
                 other.haptic = 1
                 other.speed /= 2
 
-                # sexual reproduction:
-                if sprite.spawn > 0 and other.spawn > 0 \
-                and sprite.energy > 2500 and other.energy > 2500 \
-                and sprite.spawn_refractory == 0 and other.spawn_refractory == 0:
-                    sprite.energy -= 2500
-                    other.energy -= 2500
-                    sprite.spawn_refractory = 30
-                    other.spawn_refractory = 30
-                    newgenome = Genome.from_parents(sprite.genome, other.genome)
-                    newchar = Character(world)
-                    newchar.load_genome(newgenome)
-                    newchar.set_midpoint_x(midpoint_x)
-                    newchar.set_midpoint_y(midpoint_y)
-                    newchar.gen = max(sprite.gen, other.gen) + 1
-                    newchar.parents = 2
-                    newchar.energy = 4000
-                    sprite.children += 1
-                    other.children += 1
-                    world.allcharacters.add(newchar)
-
+                if sprite.predator == other.predator:
+                    # sexual reproduction:
+                    if sprite.spawn > 0 and other.spawn > 0 \
+                    and sprite.energy > 2500 and other.energy > 2500 \
+                    and sprite.spawn_refractory == 0 and other.spawn_refractory == 0:
+                        sprite.energy -= 2500
+                        other.energy -= 2500
+                        sprite.spawn_refractory = 30
+                        other.spawn_refractory = 30
+                        newgenome = Genome.from_parents(sprite.genome, other.genome)
+                        newchar = Character(world)
+                        newchar.load_genome(newgenome)
+                        newchar.set_midpoint_x(midpoint_x)
+                        newchar.set_midpoint_y(midpoint_y)
+                        newchar.gen = max(sprite.gen, other.gen) + 1
+                        newchar.parents = 2
+                        newchar.energy = 4000
+                        sprite.children += 1
+                        other.children += 1
+                        world.allcharacters.add(newchar)
+                else:
+                    # nom nom nom nom nom
+                    if sprite.predator:
+                        predator = sprite
+                        prey = other
+                    else:
+                        predator = other
+                        prey = sprite
+                    
+                    predator.foodchain = True
+                    prey.foodchain = True
+                    if prey.energy < 1000:
+                        predator.energy += prey.energy
+                        prey.energy = 0
+                        prey.die()
+                    else:
+                        predator.energy += 900
+                        prey.energy -= 1000
 
