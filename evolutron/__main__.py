@@ -76,6 +76,7 @@ def main():
     last_frame = time.perf_counter()
     render = True
     pause = False
+    i = 0
     while 1:
         last_t = t
         t = time.perf_counter()
@@ -89,7 +90,14 @@ def main():
             t2 = time.perf_counter()
             print('tick time', t2 - t1, 'target tickrate', tickrate)
 
-        if t - last_frame > framerate and render:
+        rendered = False
+        if i % 200 == 0:
+            window.frame()
+            pygame.image.save(window.screen, 'timelapse-screenshots/%08d.png'%(i/200))
+            rendered = True
+        i += 1
+
+        if t - last_frame > framerate and render and not rendered:
             print('frame time', t - last_frame)
             window.frame()
             last_frame = t
